@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eric's Middle High School Vocabulary Master 專業版</title>
+    <style>
+        /* 基礎設定 */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            background-color: #D2BEAA; 
+            font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        /* 視窗化結構與間隔 */
+        #app {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            width: 95%;
+            max-width: 1000px;
+            align-items: center;
+        }
+
+        .window {
+            background: #ffffff;
+            border-radius: 40px;
+            padding: 50px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            display: none; /* 預設隱藏，由 JS 控制顯示 */
+        }
+        .window.active { display: block; }
+
+        /* 首頁樣式 */
+        .main-title { font-size: 3.4rem; font-weight: 900; margin-bottom: 10px; color: #444; }
+        .sub-title { font-size: 1.6rem; color: #777; margin-bottom: 30px; }
+        
+        .setup-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .select-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 80%;
+            max-width: 400px;
+        }
+        .select-group label {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .custom-select {
+            font-size: 1.3rem;
+            padding: 12px 20px;
+            border-radius: 15px;
+            border: 3px solid #ddd;
+            background: #f9f9f9;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        /* 測驗畫面樣式 */
+        .progress-text { font-size: 2rem; font-weight: bold; color: #8B5E3C; margin-bottom: 15px; }
+        .progress-container { background: #eee; height: 15px; border-radius: 10px; margin-bottom: 40px; overflow: hidden; }
+        .progress-bar { background: #8B5E3C; height: 100%; width: 0%; transition: width 0.3s; }
+
+        /* 單字比例 */
+        .quiz-word { font-size: 3.8rem; font-weight: 900; margin: 20px 0; display: block; line-height: 1.2; word-break: break-word; text-align: center; }
+        .learn-translation { font-size: 2.8rem; font-weight: 700; color: #555; margin: 10px 0 30px; text-align: center; line-height: 1.2; word-break: break-word; }
+        .options-grid.hidden { display: none; }
+        .audio-btn { 
+            background: #f0f0f0; border: none; padding: 15px 30px; border-radius: 40px; 
+            font-size: 1.2rem; cursor: pointer; margin-bottom: 30px; font-weight: bold;
+        }
+        .audio-btn:hover { background: #e0e0e0; }
+
+        /* 選項按鈕：大字體且並排 */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .option-btn {
+            font-size: 1.8rem; font-weight: bold; padding: 25px; 
+            border: 3px solid #eee; border-radius: 20px; background: #fff;
+            cursor: pointer; transition: 0.2s; text-align: center; word-break: break-word;
+        }
+        .option-btn:hover { background: #fdf5ef; border-color: #D2BEAA; }
+
+        /* 結果畫面樣式 */
+        .final-score { font-size: 8rem; font-weight: 900; line-height: 1; margin: 20px 0; }
+        .score-red { color: #d9534f; }
+        .score-yellow { color: #f0ad4e; }
+        .score-green { color: #5cb85c; }
+
+        /* 表格優化 */
+        .table-container { margin-top: 30px; border-radius: 20px; overflow: hidden; border: 1px solid #eee; max-height: 400px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 1.2rem; }
+        th { background: #f8f8f8; padding: 15px; color: #666; text-align: left; position: sticky; top: 0; }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: left; }
+        .col-word { font-weight: bold; color: #5a4fcf; width: 30%; }
+        .col-ans { width: 25%; }
+        .col-user { width: 25%; }
+        .col-res { width: 20%; text-align: center; }
+
+        .start-btn {
+            background: #333; color: #fff; padding: 18px 50px; font-size: 1.8rem; 
+            font-weight: bold; border-radius: 20px; border: none; cursor: pointer; margin-top: 10px; transition: background 0.2s;
+        }
+        .start-btn:hover { background: #555; }
+        .action-btn { margin-top: 25px; background: #8B5E3C; }
+        .action-btn:hover { background: #6F4A2F; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 視窗 1：首頁 -->
+        <section id="start-screen" class="window active">
+            <h1 class="main-title">Eric's 國中英文單字挑戰</h1>
+            <p class="sub-title">請選擇測驗等級與功能模式開始挑戰</p>
+            
+            <div class="setup-container">
+                <!-- 選擇模式 -->
+                <div class="select-group">
+                    <label for="app-mode-select">1. 運行模式</label>
+                    <select id="app-mode-select" class="custom-select" onchange="updateUIForAppMode()">
+                        <option value="quiz" selected>測驗模式</option>
+                        <option value="learn">學習模式</option>
+                    </select>
+                </div>
+
+                <!-- 選擇單字範圍 -->
+                <div class="select-group">
+                    <label for="level-select">2. 單字級別</label>
+                    <select id="level-select" class="custom-select" onchange="updatePartOptions()">
+                        <option value="easy">Easy (國一/基礎)</option>
+                        <option value="medium" selected>Medium (國二/中級)</option>
+                        <option value="hard">Hard (國三/挑戰)</option>
+                        <option value="basic">Basic (教育部國中1200單字)</option>
+                        <option value="advanced">Advanced (國中進階800單字)</option>
+                    </select>
+                </div>
+
+                <!-- 選擇分段學習 -->
+                <div class="select-group">
+                    <label for="part-select">3. 學習/測試區段 (50字一組)</label>
+                    <select id="part-select" class="custom-select">
+                        <!-- JavaScript 動態生成 -->
+                    </select>
+                </div>
+
+                <!-- 選擇翻譯方向模式 -->
+                <div class="select-group">
+                    <label for="mode-select">4. 測試方向</label>
+                    <select id="mode-select" class="custom-select">
+                        <option value="en-to-zh">英翻中 (看英文選中文)</option>
+                        <option value="zh-to-en">中翻英 (看中文選英文)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button class="start-btn" onclick="initiateQuiz()">START</button>
+        </section>
+
+        <!-- 視窗 2：測驗中 -->
+        <section id="quiz-screen" class="window">
+            <div class="progress-text" id="progress-text">Question 01 / 20</div>
+            <div class="progress-container"><div id="progress-bar" class="progress-bar"></div></div>
+            <div class="quiz-word" id="current-word">WORD</div>
+            <div class="learn-translation" id="learn-translation"></div>
+            <button class="audio-btn" id="speak-btn" onclick="speakWord()">🔊 發音</button>
+            <div id="options-grid" class="options-grid"></div>
+            <button class="start-btn action-btn" id="next-word-btn" style="display:none;" onclick="showNextWord()">Next Word</button>
+        </section>
+
+        <!-- 視窗 3：結果 -->
+        <section id="result-screen" class="window">
+            <h2 style="font-size: 3rem;">測驗完成</h2>
+            <div id="final-score" class="final-score">0</div>
+            <div id="result-table-container" class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th id="th-word">單字</th>
+                            <th>正確</th>
+                            <th>你的回答</th>
+                            <th style="text-align:center">結果</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-table-body"></tbody>
+                </table>
+            </div>
+            <div id="learn-session-table-container" class="table-container" style="display:none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>English</th>
+                            <th>中文</th>
+                        </tr>
+                    </thead>
+                    <tbody id="learn-session-table-body"></tbody>
+                </table>
+            </div>
+            <button class="start-btn action-btn" onclick="returnToStart()">TRY AGAIN</button>
+        </section>
+    </div>
+    <script>
+    const vocabData = {
+        easy: [
+            {w:"apple",m:"蘋果"},{w:"ant",m:"螞蟻"},{w:"all",m:"全部"},{w:"arm",m:["手臂","武裝"]},{w:"art",m:"藝術"},{w:"ask",m:"詢問"},{w:"aunt",m:"阿姨"},{w:"bad",m:"壞的"},{w:"bag",m:"袋子"},{w:"ball",m:"球"},
+            {w:"bee",m:"蜜蜂"},{w:"bed",m:"床"},{w:"big",m:"大的"},{w:"boy",m:"男孩"},{w:"box",m:"箱子"},{w:"bus",m:"公車"},{w:"but",m:"但是"},{w:"buy",m:"買"},{w:"bye",m:"再見"},{w:"can",m:"可以"},
+            {w:"cat",m:"貓"},{w:"cup",m:"杯子"},{w:"dad",m:"爸爸"},{w:"day",m:"日子"},{w:"dog",m:"狗"},{w:"dot",m:"點"},{w:"ear",m:"耳朵"},{w:"eat",m:"吃"},{w:"egg",m:"蛋"},{w:"eye",m:"眼睛"},
+            {w:"fan",m:"風扇"},{w:"far",m:"遠的"},{w:"fat",m:"胖的"},{w:"fly",m:"飛"},{w:"fun",m:"趣味"},{w:"gas",m:"瓦斯"},{w:"get",m:"得到"},{w:"gun",m:"槍"},{w:"guy",m:"傢伙"},{w:"hat",m:"帽子"},
+            {w:"hen",m:"母雞"},{w:"hot",m:"熱的"},{w:"ice",m:"冰"},{w:"ink",m:"墨水"},{w:"jam",m:"果醬"},{w:"jar",m:"罐子"},{w:"job",m:"工作"},{w:"joy",m:"喜悅"},{w:"key",m:"鑰匙"},{w:"kid",m:"小孩"},
+            {w:"leg",m:"腿"},{w:"let",m:"讓"},{w:"lip",m:"嘴唇"},{w:"low",m:"低的"},{w:"mad",m:"發火"},{w:"map",m:"地圖"},{w:"men",m:"男人們"},{w:"mop",m:"拖地"},{w:"mud",m:"泥巴"},{w:"net",m:"網子"},
+            {w:"new",m:"新的"},{w:"not",m:"不"},{w:"now",m:"現在"},{w:"nut",m:"堅果"},{w:"off",m:"關閉"},{w:"old",m:"老的"},{w:"one",m:"一"},{w:"out",m:"外面"},{w:"owl",m:"貓頭鷹"},{w:"own",m:"自己的"},
+            {w:"pan",m:"平底鍋"},{w:"pay",m:"付錢"},{w:"pen",m:"原子筆"},{w:"pet",m:"寵物"},{w:"pie",m:"派"},{w:"pig",m:"豬"},{w:"pin",m:"大頭針"},{w:"pot",m:"鍋子"},{w:"rat",m:"大老鼠"},{w:"red",m:"紅色"},
+            {w:"run",m:["跑","經營","流"]},{w:"sad",m:"難過"},{w:"sea",m:"海"},{w:"see",m:"看見"},{w:"set",m:["設定","一套","日落"]},{w:"six",m:"六"},{w:"sky",m:"天空"},{w:"son",m:"兒子"},{w:"sun",m:"太陽"},{w:"tap",m:"水龍頭"},
+            {w:"tea",m:"茶"},{w:"ten",m:"十"},{w:"tie",m:"領帶"},{w:"tip",m:"小費"},{w:"top",m:"頂端"},{w:"toy",m:"玩具"},{w:"try",m:"嘗試"},{w:"two",m:"二"},{w:"use",m:"使用"},{w:"van",m:"廂型車"},
+            {w:"wet",m:"濕的"},{w:"win",m:"贏"},{w:"yes",m:"是"},{w:"you",m:"你"},{w:"zoo",m:"動物園"},{w:"able",m:"能夠"},{w:"area",m:"區域"},{w:"army",m:"軍隊"},{w:"away",m:"遠離"},{w:"baby",m:"嬰兒"},
+            {w:"back",m:["後方","在...後面"]},{w:"ball",m:"球"},{w:"band",m:["樂隊","樂團"]},{w:"bank",m:["銀行","河岸","儲存"]},{w:"base",m:["基地","基礎"]},{w:"bath",m:"洗澡"},{w:"bean",m:"豆子"},{w:"bear",m:["熊","忍受","生"]},{w:"beat",m:["擊敗","敲打"]},{w:"bell",m:"鈴鐺"},
+            {w:"belt",m:"皮帶"},{w:"best",m:"最好的"},{w:"bike",m:"腳踏車"},{w:"bill",m:["帳單","紙鈔"]},{w:"bird",m:"鳥"},{w:"blue",m:"藍色"},{w:"boat",m:"小船"},{w:"body",m:"身體"},{w:"bomb",m:"炸彈"},{w:"bone",m:"骨頭"},
+            {w:"book",m:"書"},{w:"born",m:"出生"},{w:"both",m:"兩者"},{w:"bowl",m:"碗"},{w:"busy",m:"忙碌"},{w:"cake",m:"蛋糕"},{w:"call",m:"打電話"},{w:"camp",m:"露營"},{w:"card",m:"卡片"},{w:"care",m:"關心"},
+            {w:"case",m:["案件","箱子","情況"]},{w:"cash",m:"現金"},{w:"cent",m:"分"},{w:"city",m:"城市"},{w:"clay",m:"黏土"},{w:"club",m:"俱樂部"},{w:"coat",m:"大衣"},{w:"code",m:"代碼"},{w:"coin",m:"硬幣"},{w:"cold",m:"冷"},
+            {w:"cook",m:"煮"},{w:"cool",m:"酷"},{w:"copy",m:"複印"},{w:"cost",m:"花費"},{w:"crow",m:"烏鴉"},{w:"cute",m:"可愛"},{w:"dark",m:"黑暗"},{w:"date",m:"日期"},{w:"dead",m:"死"},{w:"dear",m:"親愛的"},
+            {w:"deep",m:"深"},{w:"deer",m:"鹿"},{w:"desk",m:"書桌"},{w:"diet",m:"飲食"},{w:"dish",m:"盤子"},{w:"doll",m:"洋娃娃"},{w:"door",m:"門"},{w:"down",m:"向下"},{w:"draw",m:"畫"},{w:"drop",m:"掉落"},
+            {w:"drum",m:"鼓"},{w:"duck",m:"鴨子"},{w:"dust",m:"灰塵"},{w:"duty",m:"義務"},{w:"each",m:"每個"},{w:"east",m:"東方"},{w:"easy",m:"容易"},{w:"edge",m:"邊緣"},{w:"else",m:"其他"},{w:"even",m:"甚至"},
+            {w:"ever",m:"曾經"},{w:"exam",m:"考試"},{w:"exit",m:"出口"},{w:"face",m:"臉"},{w:"fact",m:"事實"},{w:"fail",m:"失敗"},{w:"fair",m:["公平","美麗","集市"]},{w:"fall",m:["掉落","秋天","瀑布"]},{w:"farm",m:"農場"},{w:"fast",m:"快"},
+            {w:"feel",m:"感覺"},{w:"feet",m:"腳"},{w:"file",m:"文件"},{w:"fill",m:"充滿"},{w:"film",m:"電影"},{w:"find",m:"找到"},{w:"fine",m:"好"},{w:"fire",m:"火"},{w:"fish",m:"魚"},{w:"five",m:"五"},
+            {w:"flag",m:"旗幟"},{w:"food",m:"食物"},{w:"foot",m:"腳"},{w:"form",m:"表格"},{w:"free",m:"自由"},{w:"frog",m:"青蛙"},{w:"from",m:"來自"},{w:"full",m:"滿的"},{w:"game",m:"遊戲"},{w:"gate",m:"大門"},
+            {w:"gift",m:"禮物"},{w:"girl",m:"女孩"},{w:"give",m:"給"},{w:"glad",m:"高興"},{w:"goat",m:"山羊"},{w:"gold",m:"黃金"},{w:"good",m:"好的"},{w:"grow",m:"生長"},{w:"hair",m:"頭髮"},{w:"half",m:"一半"},
+            {w:"hand",m:"手"},{w:"hang",m:"掛"},{w:"hard",m:"硬的"},{w:"hate",m:"討厭"},{w:"have",m:"有"},{w:"head",m:"頭"},{w:"hear",m:"聽見"},{w:"help",m:"幫助"},{w:"here",m:"這裡"},{w:"high",m:"高"},
+            {w:"hill",m:"小山"},{w:"hold",m:"握住"},{w:"hole",m:"洞"},{w:"home",m:"家"},{w:"hope",m:"希望"},{w:"hour",m:"小時"},{w:"hurt",m:"受傷"},{w:"idea",m:"點子"},{w:"join",m:"加入"},{w:"jump",m:"跳"},
+            {w:"keep",m:"保持"},{w:"kill",m:"殺"},{w:"kind",m:"親切"},{w:"king",m:"國王"},{w:"kiss",m:"吻"},{w:"knee",m:"膝蓋"},{w:"know",m:"知道"},{w:"lake",m:"湖"},{w:"lamp",m:"燈"},{w:"land",m:"土地"},
+            {w:"last",m:"最後"},{w:"late",m:"晚的"},{w:"left",m:"左邊"},{w:"line",m:"線"},{w:"list",m:"清單"},{w:"long",m:"長的"},{w:"look",m:"看"},{w:"love",m:"愛"},{w:"mail",m:"郵件"},{w:"main",m:"主要"},
+            {w:"make",m:"製造"},{w:"mask",m:"面具"},{w:"meal",m:"餐"},{w:"meat",m:"肉"},{w:"milk",m:"牛奶"},{w:"miss",m:"錯過"},{w:"moon",m:"月亮"},{w:"more",m:"更多"},{w:"move",m:"移動"},{w:"much",m:"很多"},
+            {w:"name",m:"名字"},{w:"near",m:"靠近"},{w:"neck",m:"脖子"},{w:"news",m:"新聞"},{w:"next",m:"下一個"},{w:"nice",m:"好的"},{w:"nine",m:"九"},{w:"nose",m:"鼻子"},{w:"note",m:"筆記"},{w:"okay",m:"可以"},
+            {w:"open",m:"打開"},{w:"over",m:"結束"},{w:"page",m:"頁面"},{w:"pain",m:"疼痛"},{w:"park",m:"公園"},{w:"part",m:"部分"},{w:"pass",m:"經過"},{w:"past",m:"過去"},{w:"pink",m:"粉紅色"},{w:"plan",m:"計畫"},
+            {w:"play",m:["玩","演奏","扮演"]},{w:"poor",m:"窮的"},{w:"pull",m:"拉"},{w:"push",m:"推"},{w:"quiz",m:"測驗"},{w:"rain",m:"雨"},{w:"read",m:"讀"},{w:"real",m:"真的"},{w:"rice",m:"米飯"},{w:"rich",m:"富有"},
+            {w:"ride",m:"騎"},{w:"road",m:"道路"},{w:"rock",m:"岩石"},{w:"room",m:"房間"},{w:"rose",m:"玫瑰"},{w:"rule",m:"規則"},{w:"sale",m:"拍賣"},{w:"salt",m:"鹽"},{w:"same",m:"相同"},{w:"save",m:"儲存"},
+            {w:"send",m:"寄送"},{w:"ship",m:"船"},{w:"shoe",m:"鞋子"},{w:"shop",m:"店"},{w:"show",m:"顯示"},{w:"sick",m:"生病的"},{w:"sing",m:"唱"},{w:"size",m:"尺寸"},{w:"slow",m:"慢的"},{w:"snow",m:"雪"},
+            {w:"soap",m:"肥皂"},{w:"soft",m:"軟的"},{w:"song",m:"歌曲"},{w:"soup",m:"湯"},{w:"star",m:"星星"},{w:"stay",m:"停留"},{w:"stop",m:"停止"},{w:"swim",m:"游泳"},{w:"tail",m:"尾巴"},{w:"take",m:"拿"},
+            {w:"talk",m:"談話"},{w:"tall",m:"高的"},{w:"taxi",m:"計程車"},{w:"tell",m:"告訴"},{w:"test",m:"測驗"},{w:"than",m:"比起"},{w:"that",m:"那個"},{w:"them",m:"他們"},{w:"then",m:"然後"},{w:"thin",m:"瘦的"},
+            {w:"this",m:"這個"},{w:"time",m:"時間"},{w:"town",m:"城鎮"},{w:"tree",m:"樹"},{w:"trip",m:"旅行"},{w:"true",m:"真實"},{w:"ugly",m:"醜的"},{w:"unit",m:"單位"},{w:"very",m:"非常"},{w:"view",m:"視野"},
+            {w:"wait",m:"等待"},{w:"wake",m:"醒來"},{w:"walk",m:"走路"},{w:"wall",m:"牆壁"},{w:"want",m:"想要"},{w:"warm",m:"溫暖"},{w:"wash",m:"清洗"},{w:"watch",m:["手錶","看","守護"]},{w:"wave",m:"波浪"},{w:"wear",m:"穿"},
+            {w:"week",m:"星期"},{w:"west",m:"西方"},{w:"what",m:"什麼"},{w:"when",m:"何時"},{w:"wife",m:"妻子"},{w:"will",m:"將"},{w:"wind",m:"風"},{w:"wine",m:"葡萄酒"},{w:"wish",m:"祝福"},{w:"with",m:"與"},
+            {w:"wood",m:"木頭"},{w:"word",m:"單字"},{w:"work",m:"工作"},{w:"year",m:"年份"},{w:"zero",m:"零"}
+        ],
+        medium: [
+            {w:"absent",m:"缺席"},{w:"accept",m:"接受"},{w:"action",m:"行動"},{w:"active",m:"活躍的"},{w:"actor",m:"演員"},{w:"add",m:"增加"},{w:"address",m:["地址","網址","演講","處理"]},{w:"adult",m:"大人"},{w:"advice",m:"建議"},{w:"afraid",m:"害怕"},
+            {w:"agree",m:"同意"},{w:"ahead",m:"在前"},{w:"allow",m:"允許"},{w:"almost",m:"幾乎"},{w:"along",m:"沿著"},{w:"aloud",m:"大聲地"},{w:"always",m:"總是"},{w:"amount",m:"數量"},{w:"angry",m:"生氣"},{w:"animal",m:"動物"},
+            {w:"answer",m:"答案"},{w:"anyway",m:"反正"},{w:"appear",m:"出現"},{w:"arrive",m:"到達"},{w:"attack",m:"攻擊"},{w:"attend",m:"參加"},{w:"august",m:"八月"},{w:"autumn",m:"秋天"},{w:"avenue",m:"大道"},{w:"avoid",m:"避免"},
+            {w:"basket",m:"籃子"},{w:"beauty",m:"美"},{w:"become",m:"成為"},{w:"before",m:"之前"},{w:"begin",m:"開始"},{w:"behind",m:"在後"},{w:"belief",m:"信念"},{w:"belong",m:"屬於"},{w:"below",m:"在下"},{w:"beside",m:"在旁"},
+            {w:"better",m:"更好"},{w:"beyond",m:"超越"},{w:"bitter",m:"苦的"},{w:"blame",m:"責備"},{w:"blanket",m:"毯子"},{w:"block",m:"街區"},{w:"blood",m:"血液"},{w:"board",m:"板子"},{w:"borrow",m:"借入"},{w:"bottle",m:"瓶子"},
+            {w:"bottom",m:"底部"},{w:"branch",m:"樹枝"},{w:"brave",m:"勇敢"},{w:"bread",m:"麵包"},{w:"break",m:"打破"},{w:"bridge",m:"橋"},{w:"bright",m:"明亮"},{w:"bring",m:"帶來"},{w:"broad",m:"寬廣"},{w:"broken",m:"壞掉的"},
+            {w:"brush",m:"刷子"},{w:"bucket",m:"桶子"},{w:"build",m:"建造"},{w:"bullet",m:"子彈"},{w:"bundle",m:"捆"},{w:"burden",m:"負擔"},{w:"bureau",m:"局"},{w:"burst",m:"爆炸"},{w:"button",m:"按鈕"},{w:"camera",m:"相機"},
+            {w:"candle",m:"蠟燭"},{w:"canvas",m:"帆布"},{w:"carbon",m:"碳"},{w:"career",m:"生涯"},{w:"careful",m:"小心"},{w:"carpet",m:"地毯"},{w:"carrot",m:"紅蘿蔔"},{w:"castle",m:"城堡"},{w:"cattle",m:"牛"},{w:"cause",m:"原因"},
+            {w:"ceiling",m:"天花板"},{w:"center",m:"中心"},{w:"century",m:"世紀"},{w:"certain",m:"肯定"},{w:"change",m:"改變"},{w:"charge",m:"收費"},{w:"cheese",m:"起司"},{w:"cherry",m:"櫻桃"},{w:"chest",m:"胸部"},{w:"chief",m:"首領"},
+            {w:"child",m:"小孩"},{w:"choice",m:"選擇"},{w:"choose",m:"挑選"},{w:"church",m:"教堂"},{w:"circle",m:"圓"},{w:"citizen",m:"公民"},{w:"classic",m:"經典"},{w:"clean",m:"乾淨"},{w:"clear",m:"清楚"},{w:"clerk",m:"店員"},
+            {w:"clever",m:"聰明"},{w:"climate",m:"氣候"},{w:"climb",m:"攀爬"},{w:"clinic",m:"診所"},{w:"clock",m:"鐘"},{w:"close",m:"關閉"},{w:"closet",m:"衣櫥"},{w:"cloudy",m:"多雲"},{w:"coast",m:"海岸"},{w:"coffee",m:"咖啡"},
+            {w:"collect",m:"收集"},{w:"college",m:"大學"},{w:"column",m:"圓柱"},{w:"comfort",m:"舒適"},{w:"comic",m:"漫畫"},{w:"common",m:"常見"},{w:"company",m:"公司"},{w:"compare",m:"比較"},{w:"complex",m:"複雜"},{w:"concert",m:"音樂會"},
+            {w:"confirm",m:"確認"},{w:"connect",m:"連接"},{w:"control",m:"控制"},{w:"cookie",m:"餅乾"},{w:"corner",m:"角落"},{w:"correct",m:"正確"},{w:"cottage",m:"小屋"},{w:"cotton",m:"棉花"},{w:"country",m:"國家"},{w:"couple",m:"一對"},
+            {w:"courage",m:"勇氣"},{w:"course",m:"課程"},{w:"cousin",m:"堂表親"},{w:"cover",m:"覆蓋"},{w:"cowboy",m:"牛仔"},{w:"create",m:"創造"},{w:"credit",m:"信用"},{w:"crisis",m:"危機"},{w:"crowd",m:"人群"},{w:"cruel",m:"殘酷"},
+            {w:"culture",m:"文化"},{w:"cupboard",m:"碗盤櫃"},{w:"custom",m:"習俗"},{w:"damage",m:"損害"},{w:"danger",m:"危險"},{w:"darkness",m:"黑暗"},{w:"daughter",m:"女兒"},{w:"debate",m:"辯論"},{w:"decade",m:"十年"},{w:"decide",m:"決定"},
+            {w:"degree",m:"度數"},{w:"delight",m:"欣喜"},{w:"deliver",m:"遞送"},{w:"demand",m:"需求"},{w:"depend",m:"依賴"},{w:"depth",m:"深度"},{w:"desert",m:"沙漠"},{w:"design",m:"設計"},{w:"desire",m:"渴望"},{w:"detail",m:"細節"},
+            {w:"develop",m:"發展"},{w:"device",m:"裝置"},{w:"diamond",m:"鑽石"},{w:"diary",m:"日記"},{w:"digital",m:"數位"},{w:"dinner",m:"晚餐"},{w:"direct",m:"直接"},{w:"dirty",m:"髒"},{w:"discuss",m:"討論"},{w:"disease",m:"疾病"},
+            {w:"distant",m:"遙遠"},{w:"divide",m:"劃分"},{w:"doctor",m:"醫生"},{w:"dollar",m:"美金"},{w:"donkey",m:"驢子"},{w:"double",m:"加倍"},{w:"doubt",m:"懷疑"},{w:"dragon",m:"龍"},{w:"drawer",m:"抽屜"},{w:"dream",m:"夢"},
+            {w:"dress",m:"洋裝"},{w:"driver",m:"司機"},{w:"during",m:"期間"},{w:"eagle",m:"老鷹"},{w:"earth",m:"地球"},{w:"easily",m:"容易地"},{w:"eastern",m:"東方的"},{w:"editor",m:"編輯"},{w:"effect",m:"效果"},{w:"effort",m:"努力"},
+            {w:"eighth",m:"第八"},{w:"either",m:"兩者之一"},{w:"elder",m:"年長的"},{w:"elect",m:"選舉"},{w:"element",m:"元素"},{w:"eleven",m:"十一"},{w:"empty",m:"空的"},{w:"ending",m:"結局"},{w:"energy",m:"能量"},{w:"engine",m:"引擎"},
+            {w:"enough",m:"足夠"},{w:"entire",m:"整個"},{w:"escape",m:"逃脫"},{w:"europe",m:"歐洲"},{w:"expect",m:"期待"},{w:"expert",m:"專家"},{w:"export",m:"出口"},{w:"factor",m:"因素"},{w:"famous",m:"著名的"},{w:"farmer",m:"農夫"},
+            {w:"father",m:"父親"},{w:"fellow",m:"伙伴"},{w:"female",m:"女性"},{w:"figure",m:"數字"},{w:"finger",m:"手指"},{w:"finish",m:"完成"},{w:"flavor",m:"風味"},{w:"flight",m:"班機"},{w:"flower",m:"花朵"},{w:"follow",m:"跟隨"},
+            {w:"forest",m:"森林"},{w:"forget",m:"忘記"},{w:"former",m:"前者"},{w:"fourth",m:"第四"},{w:"freeze",m:"結冰"},{w:"french",m:"法文"},{w:"friend",m:"朋友"},{w:"fright",m:"驚嚇"},{w:"future",m:"未來"},{w:"garden",m:"花園"},
+            {w:"gather",m:"聚集"},{w:"gender",m:"性別"},{w:"gentle",m:"溫柔"},{w:"german",m:"德文"},{w:"glance",m:"瞥見"},{w:"global",m:"全球"},{w:"golden",m:"金色的"},{w:"govern",m:"治理"},{w:"ground",m:"地面"},{w:"growth",m:"成長"},
+            {w:"guilty",m:"有罪的"},{w:"guitar",m:"吉他"},{w:"hammer",m:"鐵鎚"},{w:"handle",m:"處理"},{w:"happen",m:"發生"},{w:"health",m:"健康"},{w:"heaven",m:"天堂"},{w:"height",m:"高度"},{w:"helper",m:"助手"},{w:"hidden",m:"隱藏"},
+            {w:"hockey",m:"冰球"},{w:"hollow",m:"中空的"},{w:"honest",m:"誠實"},{w:"horror",m:"恐懼"},{w:"hungry",m:"飢餓"},{w:"hunter",m:"獵人"},{w:"ignore",m:"忽略"},{w:"impact",m:"衝擊"},{w:"import",m:"進口"},{w:"income",m:"收入"},
+            {w:"indoor",m:"室內"},{w:"injury",m:"傷害"},{w:"insect",m:"昆蟲"},{w:"inside",m:"在內"},{w:"insist",m:"堅持"},{w:"intent",m:"意圖"},{w:"invent",m:"發明"},{w:"invest",m:"投資"},{w:"island",m:"島嶼"},{w:"jacket",m:"夾克"},
+            {w:"junior",m:"初級"},{w:"kettle",m:"水壺"},{w:"kidnap",m:"綁架"},{w:"kindly",m:"親切地"},{w:"knight",m:"騎士"},{w:"ladder",m:"梯子"},{w:"laptop",m:"筆電"},{w:"lately",m:"最近"},{w:"latest",m:"最新"},{w:"launch",m:"發射"},
+            {w:"lawyer",m:"律師"},{w:"leader",m:"領導者"},{w:"league",m:"聯盟"},{w:"legend",m:"傳說"},{w:"lesson",m:"課"},{w:"letter",m:"信"},{w:"likely",m:"可能的"},{w:"liquid",m:"液體"},{w:"listen",m:"傾聽"},{w:"little",m:"一點"},
+            {w:"lively",m:"活潑的"},{w:"lizard",m:"蜥蜴"},{w:"locate",m:"位於"},{w:"lonely",m:"孤獨"},{w:"lovely",m:"可愛的"},{w:"luxury",m:"奢侈"},{w:"magnet",m:"磁鐵"},{w:"mainland",m:"大陸"},{w:"manage",m:"管理"},{w:"manner",m:"方式"},
+            {w:"market",m:"市場"},{w:"master",m:"大師"},{w:"matter",m:"事情"},{w:"medium",m:"中間"},{w:"member",m:"成員"},{w:"memory",m:"記憶"},{w:"mental",m:"心理的"},{w:"method",m:"方法"},{w:"middle",m:"中間"},{w:"mirror",m:"鏡子"},
+            {w:"modern",m:"現代的"},{w:"moment",m:"時刻"},{w:"monkey",m:"猴子"},{w:"mother",m:"母親"},{w:"motion",m:"動作"},{w:"mountain",m:"山"},{w:"museum",m:"博物館"},{w:"narrow",m:"狹窄的"},{w:"nation",m:"國家"},{w:"native",m:"本土的"},
+            {w:"nature",m:"自然"},{w:"nearly",m:"幾乎"},{w:"needle",m:"針"},{w:"nephew",m:"姪子"},{w:"nervous",m:"緊張的"},{w:"nickel",m:"鎳"},{w:"niece",m:"姪女"},{w:"nobody",m:"沒人"},{w:"normal",m:"正常的"},{w:"notice",m:"注意"},
+            {w:"number",m:"數字"},{w:"object",m:"物體"},{w:"office",m:"辦公室"},{w:"online",m:"線上"},{w:"orange",m:"橘色"},{w:"others",m:"其他人"},{w:"output",m:"輸出"},{w:"parent",m:"父母"},{w:"parrot",m:"鸚鵡"},{w:"pencil",m:"鉛筆"},
+            {w:"people",m:"人們"},{w:"period",m:"期間"},{w:"person",m:"人"},{w:"phrase",m:"片語"},{w:"picnic",m:"野餐"},{w:"picture",m:"圖片"},{w:"pigeon",m:"鴿子"},{w:"planet",m:"行星"},{w:"player",m:"播放器"},{w:"please",m:"請"},
+            {w:"pocket",m:"口袋"},{w:"poetry",m:"詩"},{w:"police",m:"警察"},{w:"polite",m:"有禮貌"},{w:"poodle",m:"貴賓狗"},{w:"poster",m:"海報"},{w:"potato",m:"馬鈴薯"},{w:"powder",m:"粉末"},{w:"praise",m:"讚揚"},{w:"prayer",m:"祈禱"},
+            {w:"preach",m:"傳教"},{w:"pretty",m:"漂亮"},{w:"prison",m:"監獄"},{w:"profit",m:"利潤"},{w:"proper",m:"適當的"},{w:"public",m:"公共的"},{w:"punish",m:"懲罰"},{w:"puppet",m:"木偶"},{w:"purple",m:"紫色"},{w:"puzzle",m:"謎題"},
+            {w:"rabbit",m:"兔子"},{w:"rather",m:"相當"},{w:"reason",m:"理由"},{w:"record",m:"記錄"},{w:"refuse",m:"拒絕"},{w:"regret",m:"後悔"},{w:"repair",m:"修理"},{w:"repeat",m:"重複"},{w:"report",m:"報告"},{w:"rescue",m:"救援"},
+            {w:"result",m:"結果"},{w:"return",m:"返回"},{w:"review",m:"複習"},{w:"reward",m:"獎勵"},{w:"rhythm",m:"節奏"},{w:"ribbon",m:"緞帶"},{w:"rocket",m:"火箭"},{w:"roller",m:"滾筒"},{w:"rubber",m:"橡膠"},{w:"runner",m:"跑者"},
+            {w:"safety",m:"安全"},{w:"sailor",m:"水手"},{w:"salary",m:"薪水"},{w:"sauce",m:"醬汁"},{w:"school",m:"學校"},{w:"screen",m:"螢幕"},{w:"search",m:"搜尋"},{w:"season",m:"季節"},{w:"second",m:"第二"},{w:"secret",m:"秘密"},
+            {w:"seldom",m:"很少"},{w:"select",m:"選擇"},{w:"seller",m:"賣家"},{w:"senior",m:"高階"},{w:"series",m:"系列"},{w:"settle",m:"定居"},{w:"shadow",m:"影子"},{w:"shaggy",m:"毛茸茸"},{w:"shared",m:"分享"},{w:"shorts",m:"短褲"},
+            {w:"signal",m:"訊號"},{w:"silent",m:"安靜的"},{w:"silver",m:"銀色的"},{w:"simple",m:"簡單"},{w:"singer",m:"歌手"},{w:"single",m:"單一"},{w:"sister",m:"姊妹"},{w:"social",m:"社交的"},{w:"socket",m:"插座"},{w:"speech",m:"演講"},
+            {w:"spirit",m:"精神"},{w:"sports",m:"運動"},{w:"square",m:"正方形"},{w:"stable",m:"穩定的"},{w:"statue",m:"雕像"},{w:"stream",m:"溪流"},{w:"street",m:"街道"},{w:"stress",m:"壓力"},{w:"strong",m:"強壯"},{w:"studio",m:"工作室"},
+            {w:"sudden",m:"突然"},{w:"summer",m:"夏天"},{w:"supper",m:"晚餐"},{w:"supply",m:"供應"},{w:"switch",m:"開關"},{w:"system",m:"系統"},{w:"talent",m:"天分"},{w:"target",m:"目標"},{w:"temple",m:"寺廟"},{w:"thanks",m:"謝謝"},
+            {w:"theory",m:"理論"},{w:"thread",m:"線"},{w:"throat",m:"喉嚨"},{w:"ticket",m:"票"},{w:"tissue",m:"衛生紙"},{w:"tomato",m:"番茄"},{w:"tongue",m:"舌頭"},{w:"travel",m:"旅行"},{w:"tunnel",m:"隧道"},{w:"turkey",m:"火雞"},
+            {w:"turtle",m:"烏龜"},{w:"twelve",m:"十二"},{w:"twenty",m:"二十"},{w:"unique",m:"獨特的"},{w:"update",m:"更新"},{w:"useful",m:"有用的"},{w:"valley",m:"山谷"},{w:"vessel",m:"血管/船"},{w:"victim",m:"受害者"},{w:"violin",m:"小提琴"},
+            {w:"vision",m:"視力"},{w:"visual",m:"視覺的"},{w:"volume",m:"音量"},{w:"waiter",m:"服務生"},{w:"walker",m:"散步者"},{w:"wallet",m:"錢包"},{w:"weapon",m:"武器"},{w:"weight",m:"重量"},{w:"winter",m:"冬天"},{w:"wisdom",m:"智慧"},
+            {w:"within",m:"在內"},{w:"worker",m:"工人"},{w:"writer",m:"作家"},{w:"yellow",m:"黃色"},{w:"yogurt",m:"優格"}
+        ],
+        hard: [
+            {w:"abandon",m:"拋棄"},{w:"ability",m:"能力"},{w:"abroad",m:"出國"},{w:"absolute",m:"絕對"},{w:"abundant",m:"豐富"},{w:"academic",m:"學術"},{w:"accent",m:"口音"},{w:"accident",m:"意外"},{w:"accurate",m:"準確"},{w:"accuse",m:"指控"},
+            {w:"achieve",m:"達成"},{w:"acquire",m:"取得"},{w:"activity",m:"活動"},{w:"actually",m:"事實上"},{w:"adapt",m:"適應"},{w:"addition",m:"增加"},{w:"adequate",m:"足夠的"},{w:"adjust",m:"調整"},{w:"admire",m:"欽佩"},{w:"admit",m:"承認"},
+            {w:"advance",m:"進步"},{w:"advantage",m:"優點"},{w:"advertise",m:"打廣告"},{w:"advocate",m:"倡導"},{w:"affair",m:"事務"},{w:"affect",m:"影響"},{w:"afford",m:"買得起"},{w:"agency",m:"機構"},{w:"agenda",m:"議程"},{w:"agent",m:"代理人"},
+            {w:"airline",m:"航空公司"},{w:"alcohol",m:"酒精"},{w:"alert",m:"警惕"},{w:"alliance",m:"聯盟"},{w:"alligator",m:"短吻鱷"},{w:"allowance",m:"零用錢"},{w:"alphabet",m:"字母表"},{w:"alter",m:"改變"},{w:"amazing",m:"驚人"},{w:"ambition",m:"抱負"},
+            {w:"ambulance",m:"救護車"},{w:"analysis",m:"分析"},{w:"ancestor",m:"祖先"},{w:"ancient",m:"古老"},{w:"anniversary",m:"週年"},{w:"announce",m:"宣布"},{w:"annual",m:"年度的"},{w:"anonymous",m:"匿名的"},{w:"anxiety",m:"焦慮"},{w:"apartment",m:"公寓"},
+            {w:"apparent",m:"顯然"},{w:"appearance",m:"外觀"},{w:"appetite",m:"胃口"},{w:"appliance",m:"家電"},{w:"applicant",m:"申請人"},{w:"appoint",m:"任命"},{w:"appreciate",m:"感激"},{w:"approach",m:"靠近"},{w:"approval",m:"批准"},{w:"aquarium",m:"水族館"},
+            {w:"architect",m:"建築師"},{w:"argument",m:"爭論"},{w:"artificial",m:"人造"},{w:"artistic",m:"藝術的"},{w:"ashamed",m:"羞愧"},{w:"aspect",m:"方面"},{w:"aspirin",m:"阿斯匹靈"},{w:"assemble",m:"組裝"},{w:"assign",m:"分配"},{w:"assistance",m:"協助"},
+            {w:"associate",m:"聯想"},{w:"assumption",m:"假設"},{w:"assurance",m:"保證"},{w:"astronaut",m:"太空人"},{w:"athletic",m:"運動的"},{w:"atmosphere",m:"氣氛"},{w:"attachment",m:"附件"},{w:"attempt",m:"嘗試"},{w:"attitude",m:"態度"},{w:"attract",m:"吸引"},
+            {w:"audience",m:"觀眾"},{w:"authority",m:"權威"},{w:"automatic",m:"自動的"},{w:"available",m:"可用的"},{w:"average",m:"平均"},{w:"backward",m:"向後"},{w:"bacteria",m:"細菌"},{w:"baggage",m:"行李"},{w:"balance",m:"平衡"},{w:"balloon",m:"氣球"},
+            {w:"bandage",m:"繃帶"},{w:"bankrupt",m:"破產"},{w:"barely",m:"幾乎不"},{w:"bargain",m:"討價還價"},{w:"barrier",m:"障礙"},{w:"basically",m:"基本上"},{w:"battery",m:"電池"},{w:"beautiful",m:"美麗"},{w:"beginner",m:"初學者"},{w:"behavior",m:"行為"},
+            {w:"benefit",m:"利益"},{w:"beverage",m:"飲料"},{w:"billion",m:"十億"},{w:"biology",m:"生物學"},{w:"birthday",m:"生日"},{w:"blank",m:"空白"},{w:"blessing",m:"祝福"},{w:"booking",m:"預訂"},{w:"boundary",m:"邊界"},{w:"boycott",m:"抵制"},
+            {w:"bracelet",m:"手鐲"},{w:"bravery",m:"勇敢"},{w:"broadcast",m:"廣播"},{w:"brilliant",m:"輝煌的"},{w:"bulletin",m:"佈告"},{w:"business",m:"生意"},{w:"calendar",m:"日曆"},{w:"campaign",m:"活動"},{w:"candidate",m:"候選人"},{w:"capacity",m:"容量"},
+            {w:"caption",m:"標題"},{w:"category",m:"類別"},{w:"cautious",m:"謹慎"},{w:"celebrate",m:"慶祝"},{w:"cellphone",m:"手機"},{w:"cemetery",m:"墓地"},{w:"certificate",m:"證書"},{w:"challenge",m:"挑戰"},{w:"champion",m:"冠軍"},{w:"character",m:"性格"},
+            {w:"charity",m:"慈善"},{w:"charming",m:"迷人"},{w:"chemical",m:"化學"},{w:"chimney",m:"煙囪"},{w:"cholesterol",m:"膽固醇"},{w:"civilization",m:"文明"},{w:"classify",m:"分類"},{w:"client",m:"客戶"},{w:"clumsy",m:"笨拙"},{w:"coincidence",m:"巧合"},
+            {w:"collapse",m:"倒塌"},{w:"collection",m:"收集"},{w:"combination",m:"結合"},{w:"comfortable",m:"舒服"},{w:"commander",m:"指揮官"},{w:"commercial",m:"商業"},{w:"commitment",m:"承諾"},{w:"committee",m:"委員會"},{w:"companion",m:"夥伴"},{w:"comparison",m:"比較"},
+            {w:"competition",m:"競爭"},{w:"complaint",m:"投訴"},{w:"completely",m:"完全"},{w:"complex",m:"複雜"},{w:"compliment",m:"稱讚"},{w:"composition",m:"作文"},{w:"compound",m:"化合物"},{w:"compromise",m:"妥協"},{w:"computer",m:"電腦"},{w:"concentrate",m:"專注"},
+            {w:"concept",m:"概念"},{w:"concerning",m:"關於"},{w:"conclusion",m:"結論"},{w:"concrete",m:"具體的"},{w:"condition",m:"條件"},{w:"conductor",m:"指揮"},{w:"conference",m:"會議"},{w:"confidence",m:"信心"},{w:"confuse",m:"混淆"},{w:"congratulation",m:"恭喜"},
+            {w:"connection",m:"連接"},{w:"conscience",m:"良心"},{w:"consequence",m:"後果"},{w:"conservative",m:"保守的"},{w:"considerable",m:"相當大的"},{w:"consistent",m:"一致的"},{w:"constant",m:"經常的"},{w:"constitution",m:"憲法"},{w:"construction",m:"建築"},{w:"consultant",m:"顧問"},
+            {w:"consumer",m:"消費者"},{w:"contact",m:"接觸"},{w:"contemporary",m:"當代的"},{w:"continent",m:"大陸"},{w:"continue",m:"繼續"},{w:"contract",m:"合約"},{w:"contribution",m:"貢獻"},{w:"convenience",m:"方便"},{w:"conversation",m:"對話"},{w:"convince",m:"說服"},
+            {w:"cooperate",m:"合作"},{w:"copyright",m:"版權"},{w:"corporation",m:"公司"},{w:"correspond",m:"通信"},{w:"corridor",m:"走廊"},{w:"costume",m:"服裝"},{w:"cottage",m:"小屋"},{w:"council",m:"議會"},{w:"counter",m:"櫃檯"},{w:"countryside",m:"鄉間"},
+            {w:"creativity",m:"創造力"},{w:"criminal",m:"罪犯"},{w:"criticism",m:"批評"},{w:"cultivate",m:"培養"},{w:"curiosity",m:"好奇心"},{w:"currency",m:"貨幣"},{w:"currently",m:"目前"},{w:"cushion",m:"墊子"},{w:"customer",m:"顧客"},{w:"deadline",m:"截止日期"},
+            {w:"decoration",m:"裝飾"},{w:"decrease",m:"減少"},{w:"dedicate",m:"奉獻"},{w:"definite",m:"肯定的"},{w:"definition",m:"定義"},{w:"delegate",m:"代表"},{w:"deliberate",m:"故意的"},{w:"delicate",m:"精緻的"},{w:"democracy",m:"民主"},{w:"demonstrate",m:"示範"},
+            {w:"departure",m:"離開"},{w:"dependent",m:"依賴的"},{w:"description",m:"描述"},{w:"deserve",m:"值得"},{w:"destination",m:"目的地"},{w:"destruction",m:"破壞"},{w:"detective",m:"偵探"},{w:"detergent",m:"清潔劑"},{w:"determination",m:"決心"},{w:"devote",m:"致力於"},
+            {w:"diagnose",m:"診斷"},{w:"diagram",m:"圖表"},{w:"dialect",m:"方言"},{w:"dictation",m:"聽寫"},{w:"dictionary",m:"字典"},{w:"difference",m:"差別"},{w:"difficulty",m:"困難"},{w:"dimension",m:"尺寸"},{w:"diploma",m:"文憑"},{w:"disadvantage",m:"缺點"},
+            {w:"disagree",m:"不同意"},{w:"disappear",m:"消失"},{w:"disappoint",m:"使失望"},{w:"disaster",m:"災難"},{w:"discipline",m:"紀律"},{w:"discount",m:"折扣"},{w:"discovery",m:"發現"},{w:"discrimination",m:"歧視"},{w:"discussion",m:"討論"},{w:"disease",m:"疾病"},
+            {w:"disguise",m:"偽裝"},{w:"dishonest",m:"不誠實"},{w:"dismiss",m:"解僱"},{w:"display",m:"展示"},{w:"dispute",m:"爭執"},{w:"distance",m:"距離"},{w:"distinction",m:"區別"},{w:"distinguish",m:"區分"},{w:"distribute",m:"分發"},{w:"district",m:"區域"},
+            {w:"disturb",m:"打擾"},{w:"division",m:"部門"},{w:"document",m:"文件"},{w:"domestic",m:"國內的"},{w:"dominant",m:"佔優勢的"},{w:"dominate",m:"支配"},{w:"dormitory",m:"宿舍"},{w:"doubtful",m:"懷疑的"},{w:"downstairs",m:"在樓下"},{w:"downtown",m:"市中心"},
+            {w:"dramatic",m:"戲劇性的"},{w:"dreadful",m:"可怕的"},{w:"drifting",m:"漂流"},{w:"drilling",m:"鑽孔"},{w:"drought",m:"乾旱"},{w:"drowsy",m:"昏昏欲睡"},{w:"duplicate",m:"複製"},{w:"duration",m:"持續時間"},{w:"dynamic",m:"動態的"},{w:"eagerly",m:"渴望地"},
+            {w:"earnest",m:"認真的"},{w:"earthquake",m:"地震"},{w:"eccentric",m:"古怪的"},{w:"economic",m:"經濟的"},{w:"economical",m:"節儉的"},{w:"economy",m:"經濟"},{w:"education",m:"教育"},{w:"effective",m:"有效的"},{w:"efficiency",m:"效率"},{w:"elaborate",m:"精心製作"},
+            {w:"elastic",m:"有彈性的"},{w:"elbow",m:"手肘"},{w:"elderly",m:"年長的"},{w:"election",m:"選舉"},{w:"electrical",m:"電的"},{w:"electricity",m:"電"},{w:"electronic",m:"電子的"},{w:"elegant",m:"優雅的"},{w:"elementary",m:"基本的"},{w:"eliminate",m:"消除"},
+            {w:"elsewhere",m:"在別處"},{w:"embarrass",m:"使尷尬"},{w:"embassy",m:"大使館"},{w:"emergency",m:"緊急狀況"},{w:"emotion",m:"情感"},{w:"emphasis",m:"強調"},{w:"emphasize",m:"強調"},{w:"employee",m:"員工"},{w:"employer",m:"雇主"},{w:"employment",m:"雇用"},
+            {w:"encounter",m:"遭遇"},{w:"encourage",m:"鼓勵"},{w:"endurance",m:"耐力"},{w:"energetic",m:"精力充沛的"},{w:"enforcement",m:"執行"},{w:"engineer",m:"工程師"},{w:"enormous",m:"巨大的"},{w:"enterprise",m:"企業"},{w:"entertain",m:"娛樂"},{w:"enthusiasm",m:"熱忱"},
+            {w:"entirely",m:"完全地"},{w:"entrance",m:"入口"},{w:"envelope",m:"信封"},{w:"environment",m:"環境"},{w:"equality",m:"平等"},{w:"equipment",m:"設備"},{w:"equivalent",m:"相等的"},{w:"essential",m:"必要的"},{w:"establish",m:"建立"},{w:"estimate",m:"估計"},
+            {w:"evaluation",m:"評估"},{w:"eventually",m:"最終"},{w:"evidence",m:"證據"},{w:"evolution",m:"進化"},{w:"exaggerate",m:"誇張"},{w:"examination",m:"檢查"},{w:"exceptional",m:"卓越的"},{w:"exchange",m:"交換"},{w:"excitement",m:"興奮"},{w:"exclaim",m:"驚叫"},
+            {w:"exclusive",m:"獨有的"},{w:"excursion",m:"遠足"},{w:"executive",m:"主管"},{w:"exhausted",m:"筋疲立盡"},{w:"exhibition",m:"展覽"},{w:"existence",m:"存在"},{w:"expansion",m:"擴張"},{w:"expectation",m:"期待"},{w:"expedition",m:"探險"},{w:"expensive",m:"昂貴的"},
+            {w:"flexible",m:"靈活的"},{w:"flourish",m:"繁榮"},{w:"forecast",m:"預測"},{w:"frequent",m:"頻繁的"},{w:"frustrate",m:"挫折"},{w:"fundamental",m:"基本的"},{w:"generate",m:"產生"},{w:"generous",m:"慷慨的"},{w:"genuine",m:"真誠的"},{w:"glitter",m:"閃爍"},
+            {w:"graduate",m:"畢業"},{w:"grateful",m:"感激的"},{w:"guarantee",m:"保證"},{w:"handicap",m:"障礙"},{w:"hesitate",m:"猶豫"},{w:"hostility",m:"敵意"},{w:"identify",m:"識別"},{w:"ignorant",m:"無知的"},{w:"illustrate",m:"插圖"},{w:"immediate",m:"立即的"},
+            {w:"immigration",m:"移民"},{w:"incident",m:"事件"},{w:"indicate",m:"指示"},{w:"inevitable",m:"不可避免的"},{w:"influence",m:"影響"},{w:"initial",m:"最初的"},{w:"innocent",m:"無辜的"},{w:"inspection",m:"檢查"},{w:"instance",m:"實例"},{w:"instinct",m:"本能"},
+            {w:"instruction",m:"指示"},{w:"insurance",m:"保險"},{w:"intellectual",m:"知識分子"},{w:"intelligence",m:"智力"},{w:"interaction",m:"互動"},{w:"interference",m:"干涉"},{w:"internal",m:"內部的"},{w:"interpretation",m:"解釋"},{w:"interrupt",m:"中斷"},{w:"introduction",m:"介紹"},
+            {w:"inventory",m:"庫存"},{w:"investigate",m:"調查"},{w:"investment",m:"投資"},{w:"invisible",m:"看不見的"},{w:"involvement",m:"參與"},{w:"isolation",m:"隔離"},{w:"jealousy",m:"嫉妒"},{w:"judgment",m:"判斷"},{w:"judicial",m:"司法的"},{w:"junction",m:"連接點"},
+            {w:"justice",m:"正義"},{w:"justification",m:"辯護"},{w:"juvenile",m:"青少年的"},{w:"kidnapper",m:"綁匪"},{w:"knowledge",m:"知識"},{w:"laboratory",m:"實驗室"},{w:"landscape",m:"景觀"},{w:"latitude",m:"緯度"},{w:"laughter",m:"笑聲"},{w:"leadership",m:"領導力"},
+            {w:"legislation",m:"立法"},{w:"legitimate",m:"合法的"},{w:"leisure",m:"休閒"},{w:"liberation",m:"解放"},{w:"liberty",m:"自由"},{w:"limitation",m:"限制"},{w:"literature",m:"文學"},{w:"location",m:"位置"},{w:"logical",m:"邏輯的"},{w:"loyalty",m:"忠誠"},
+            {w:"magnificent",m:"壯麗的"},{w:"maintenance",m:"維護"},{w:"majority",m:"多數"},{w:"management",m:"管理"},{w:"manifest",m:"表明"},{w:"manipulate",m:"操縱"},{w:"manufacturer",m:"製造商"},{w:"marriage",m:"婚姻"},{w:"material",m:"材料"},{w:"mechanism",m:"機制"},
+            {w:"medicine",m:"醫學"},{w:"membership",m:"會員資格"},{w:"memorial",m:"紀念碑"},{w:"mention",m:"提及"},{w:"mercenary",m:"雇傭兵"},{w:"merciful",m:"慈悲的"},{w:"metaphor",m:"隱喻"},{w:"military",m:"軍事的"},{w:"minimize",m:"最小化"},{w:"miserable",m:"痛苦的"},
+            {w:"mixture",m:"混合物"},{w:"moderate",m:"適度的"},{w:"modification",m:"修改"},{w:"monitoring",m:"監測"},{w:"monument",m:"紀念碑"},{w:"mortgage",m:"抵押"},{w:"motivation",m:"動力"},{w:"multiple",m:"多個"},{w:"mysterious",m:"神秘的"},{w:"narrative",m:"敘述"},
+            {w:"national",m:"國家的"},{w:"natural",m:"自然的"},{w:"navigate",m:"導航"},{w:"necessity",m:"必要性"},{w:"negative",m:"負面的"},{w:"negotiate",m:"談判"},{w:"neighbor",m:"鄰居"},{w:"neutral",m:"中立的"},{w:"nomination",m:"提名"},{w:"nonprofit",m:"非營利的"},
+            {w:"nonsense",m:"廢話"},{w:"normally",m:"正常地"},{w:"notorious",m:"臭名昭著的"},{w:"nourish",m:"滋養"},{w:"novelty",m:"新穎"},{w:"numerous",m:"許多的"},{w:"nutrition",m:"營養"},{w:"obedient",m:"服從的"},{w:"objective",m:"客觀的"},{w:"obligation",m:"義務"},
+            {w:"observation",m:"觀察"},{w:"obstacle",m:"障礙"},{w:"occasion",m:"場合"},{w:"occupation",m:"職業"},{w:"occurrence",m:"發生"},{w:"offensive",m:"冒犯的"},{w:"official",m:"官方的"},{w:"operation",m:"運作"},{w:"opponent",m:"對手"},{w:"opportunity",m:"機會"},
+            {w:"opposite",m:"相反的"},{w:"optimistic",m:"樂觀的"},{w:"optional",m:"可選的"},{w:"ordinary",m:"平凡的"},{w:"organize",m:"組織"},{w:"original",m:"原始的"},{w:"otherwise",m:"否則"},{w:"outcome",m:"結果"},{w:"outline",m:"大綱"},{w:"outstanding",m:"傑出的"},
+            {w:"overcome",m:"克服"},{w:"overhead",m:"在頭頂上"},{w:"overlook",m:"俯瞰/忽略"},{w:"overseas",m:"海外的"},{w:"ownership",m:"所有權"},{w:"package",m:"包裹"},{w:"paradise",m:"天堂"},{w:"parallel",m:"平行的"},{w:"parameter",m:"參數"},{w:"participant",m:"參與者"},
+            {w:"particular",m:"特別的"},{w:"partnership",m:"夥伴關係"},{w:"passenger",m:"乘客"},{w:"patience",m:"耐心"},{w:"patriotic",m:"愛國的"},{w:"payment",m:"付款"},{w:"peaceful",m:"和平的"},{w:"peculiar",m:"奇特的"},{w:"penalty",m:"處罰"},{w:"perceive",m:"感知"},
+            {w:"performance",m:"表演"},{w:"permanent",m:"永久的"},{w:"permission",m:"許可"},{w:"persist",m:"堅持"},{w:"personal",m:"個人的"},{w:"perspective",m:"觀點"},{w:"persuade",m:"說服"},{w:"pessimistic",m:"悲觀的"},{w:"phenomenon",m:"現象"},{w:"philosophy",m:"哲學"},
+            {w:"physical",m:"身體的"},{w:"physician",m:"醫生"},{w:"platform",m:"平台"},{w:"pleasant",m:"愉快的"},{w:"pleasure",m:"快樂"},{w:"plentiful",m:"豐富的"},{w:"pneumonia",m:"肺炎"},{w:"poisonous",m:"有毒的"},{w:"politics",m:"政治"},{w:"pollution",m:"污染"},
+            {w:"popularity",m:"流行"},{w:"population",m:"人口"},{w:"portable",m:"手提式的"},{w:"portfolio",m:"作品集"},{w:"positive",m:"正面的"},{w:"possession",m:"擁有物"},{w:"possibility",m:"可能性"},{w:"potential",m:"潛力"},{w:"poverty",m:"貧窮"},{w:"practical",m:"實際的"},
+            {w:"precaution",m:"預防措施"},{w:"preceding",m:"在前的"},{w:"precious",m:"珍貴的"},{w:"precise",m:"精確的"},{w:"predict",m:"預測"},{w:"preference",m:"偏好"},{w:"pregnancy",m:"懷孕"},{w:"prejudice",m:"偏見"},{w:"preliminary",m:"初步的"},{w:"preparation",m:"準備"},
+            {w:"presence",m:"存在"},{w:"preserve",m:"保護"},{w:"president",m:"總統"},{w:"pressure",m:"壓力"},{w:"prestige",m:"名望"},{w:"presumably",m:"據推測"},{w:"prevalence",m:"流行"},{w:"prevention",m:"預防"},{w:"previous",m:"以前的"},{w:"priority",m:"優先權"},
+            {w:"privacy",m:"隱私"},{w:"privilege",m:"特權"},{w:"probability",m:"機率"},{w:"procedure",m:"程序"},{w:"proceed",m:"繼續"},{w:"process",m:"過程"},{w:"production",m:"生產"},{w:"profession",m:"職業"},{w:"profitable",m:"有利潤的"},{w:"prohibit",m:"禁止"},
+            {w:"project",m:"計畫"},{w:"prominent",m:"顯著的"},{w:"promise",m:"承諾"},{w:"promotion",m:"晉升"},{w:"promptly",m:"迅速地"},{w:"pronounce",m:"發音"},{w:"property",m:"財產"},{w:"proportion",m:"比例"},{w:"proposal",m:"提議"},{w:"prospect",m:"前景"},
+            {w:"prosperity",m:"繁榮"},{w:"protection",m:"保護"},{w:"protest",m:"抗議"},{w:"protocol",m:"協定"},{w:"provided",m:"假如"},{w:"province",m:"省"},{w:"provision",m:"條款"},{w:"psychology",m:"心理學"},{w:"publication",m:"出版"},{w:"publicity",m:"宣傳"},
+            {w:"publisher",m:"出版商"},{w:"purchase",m:"購買"},{w:"purpose",m:"目的"},{w:"qualification",m:"資格"},{w:"quality",m:"品質"},{w:"quantity",m:"數量"},{w:"quarantine",m:"隔離"},{w:"quarrel",m:"爭吵"},{w:"quarter",m:"四分之一"},{w:"questionnaire",m:"問卷"},
+            {w:"radiant",m:"光芒四射"},{w:"radical",m:"激進的"},{w:"railway",m:"鐵路"},{w:"random",m:"隨機的"},{w:"reaction",m:"反應"},{w:"realistic",m:"現實的"},{w:"reasonable",m:"合理的"},{w:"rebellion",m:"叛亂"},{w:"receipt",m:"收據"},{w:"receiver",m:"接收者"},
+            {w:"recession",m:"衰退"},{w:"recipient",m:"接受者"},{w:"reclaim",m:"收回"},{w:"recognition",m:"認可"},{w:"recommend",m:"推薦"},{w:"reconcile",m:"和解"},{w:"recreation",m:"娛樂"},{w:"recruit",m:"招募"},{w:"reduction",m:"減少"},{w:"reference",m:"參考"},
+            {w:"refinement",m:"精煉"},{w:"reflection",m:"反映"},{w:"reform",m:"改革"},{w:"refrigerator",m:"冰箱"},{w:"refugee",m:"難民"},{w:"regardless",m:"不管"},{w:"register",m:"註冊"},{w:"regulation",m:"規定"},{w:"rehearsal",m:"排練"},{w:"rejection",m:"拒絕"},
+            {w:"relationship",m:"關係"},{w:"relative",m:"親戚"},{w:"relaxation",m:"放鬆"},{w:"relevance",m:"相關性"},{w:"reliability",m:"可靠性"},{w:"relief",m:"減輕/救濟"},{w:"religion",m:"宗教"},{w:"reluctance",m:"不情願"},{w:"remarkable",m:"卓越的"},{w:"remedy",m:"補救措施"},
+            {w:"remember",m:"記得"},{w:"remind",m:"提醒"},{w:"remote",m:"遙遠的"},{w:"removal",m:"移除"},{w:"repetition",m:"重複"},{w:"replacement",m:"更換"},{w:"reproduce",m:"繁殖"},{w:"reputation",m:"聲譽"},{w:"requirement",m:"要求"},{w:"research",m:"研究"},
+            {w:"resemble",m:"像"},{w:"reservation",m:"預訂"},{w:"resignation",m:"辭職"},{w:"resistance",m:"抵抗"},{w:"resolution",m:"決心"},{w:"resource",m:"資源"},{w:"respect",m:"尊重"},{w:"respond",m:"回應"},{w:"responsibility",m:"責任"},{w:"restaurant",m:"餐廳"},
+            {w:"restoration",m:"修復"},{w:"restriction",m:"限制"},{w:"retirement",m:"退休"},{w:"revenue",m:"收益"},{w:"reverse",m:"相反的"},{w:"revolution",m:"革命"},{w:"sacrifice",m:"犧牲"},{w:"satisfaction",m:"滿意"},{w:"scarcity",m:"稀缺"},{w:"scholarship",m:"獎學金"},
+            {w:"scientific",m:"科學的"},{w:"secondary",m:"次要的"},{w:"security",m:"安全"},{w:"selection",m:"選擇"},{w:"sensitive",m:"敏感的"},{w:"significant",m:"重大的"},{w:"similarity",m:"相似"},{w:"situation",m:"情況"},{w:"skeleton",m:"骨架"},{w:"solution",m:"解決方案"},
+            {w:"specialist",m:"專家"},{w:"specific",m:"具體的"},{w:"spectacular",m:"壯觀的"},{w:"spiritual",m:"精神的"},{w:"standard",m:"標準"},{w:"statement",m:"聲明"},{w:"statistic",m:"統計"},{w:"strategy",m:"策略"},{w:"strength",m:"力量"},{w:"structure",m:"結構"},
+            {w:"subscription",m:"訂閱"},{w:"subsequent",m:"隨後的"},{w:"substance",m:"物質"},{w:"substantial",m:"大量的"},{w:"substitute",m:"替代品"},{w:"successful",m:"成功的"},{w:"sufficient",m:"足夠的"},{w:"suggestion",m:"建議"},{w:"superior",m:"優越的"},{w:"supervision",m:"監督"},
+            {w:"supplement",m:"補充"},{w:"supportive",m:"支持的"},{w:"surface",m:"表面"},{w:"surrender",m:"投降"},{w:"surround",m:"包圍"},{w:"survival",m:"生存"},{w:"suspicious",m:"可疑的"},{w:"sustainable",m:"永續的"},{w:"symptom",m:"症狀"},{w:"synthetic",m:"合成的"},
+            {w:"technical",m:"技術的"},{w:"technology",m:"技術"},{w:"temperature",m:"溫度"},{w:"temporary",m:"暫時的"},{w:"tendency",m:"傾向"},{w:"terminate",m:"終止"},{w:"territory",m:"領土"},{w:"testimony",m:"證詞"},{w:"theoretical",m:"理論的"},{w:"therapeutic",m:"治療的"},
+            {w:"therefore",m:"因此"},{w:"thoroughly",m:"徹底地"},{w:"tolerance",m:"寬容"},{w:"tradition",m:"傳統"},{w:"tragedy",m:"悲劇"},{w:"transformation",m:"轉型"},{w:"transition",m:"過渡"},{w:"translation",m:"翻譯"},{w:"transmission",m:"傳輸"},{w:"transparent",m:"透明的"},
+            {w:"transport",m:"運輸"},{w:"tremendous",m:"巨大的"},{w:"ultimate",m:"最終的"},{w:"uncertainty",m:"不確定性"},{w:"underground",m:"地下的"},{w:"understand",m:"理解"},{w:"uniform",m:"制服"},{w:"unique",m:"獨特的"},{w:"universal",m:"普遍的"},{w:"university",m:"大學"},
+            {w:"unknown",m:"未知的"},{w:"upcoming",m:"即將到來的"},{w:"update",m:"更新"},{w:"urgent",m:"緊急的"},{w:"utilize",m:"利用"},{w:"vacation",m:"假期"},{w:"vague",m:"模糊的"},{w:"valuable",m:"有價值的"},{w:"variable",m:"變數"},{w:"variation",m:"變化"},
+            {w:"variety",m:"多樣化"},{w:"various",m:"各種"},{w:"vast",m:"巨大的"},{w:"vehicle",m:"車輛"},{w:"venture",m:"冒險"},{w:"version",m:"版本"},{w:"vertical",m:"垂直的"},{w:"vibrant",m:"充滿活力"},{w:"victory",m:"勝利"},{w:"visible",m:"可見的"},
+            {w:"visionary",m:"有遠見的"},{w:"vocabulary",m:"詞彙"},{w:"voluntary",m:"自願的"},{w:"vulnerable",m:"脆弱的"},{w:"wander",m:"遊蕩"},{w:"warranty",m:"保固"},{w:"wealthy",m:"富有的"},{w:"weapon",m:"武器"},{w:"weather",m:"天氣"},{w:"wedding",m:"婚禮"},
+            {w:"weekend",m:"週末"},{w:"welfare",m:"福利"},{w:"whereas",m:"然而"},{w:"whisper",m:"細語"},{w:"wholly",m:"完全地"},{w:"widely",m:"廣泛地"},{w:"wilderness",m:"荒野"},{w:"willing",m:"願意的"},{w:"wisdom",m:"智慧"},{w:"withdraw",m:"退出"},
+            {w:"witness",m:"證人"},{w:"wonderful",m:"美好的"},{w:"workshop",m:"工作坊"},{w:"worldwide",m:"全世界"},{w:"worthwhile",m:"值得的"},{w:"wreckage",m:"殘骸"},{w:"yearn",m:"渴望"},{w:"youthful",m:"年輕的"},{w:"zealous",m:"熱情的"},{w:"zone",m:"區域"}
+        ],
+        basic: [
+            {w:"a (an)",m:"一(個)"},{w:"a few",m:"一些"},{w:"a little",m:"一些"},{w:"a lot",m:"許多"},{w:"able",m:"能夠...的"},
+            {w:"about",m:"關於"},{w:"above",m:"在...上方"},{w:"abroad",m:"在國外"},{w:"across",m:"在...對面"},{w:"actress",m:"女演員"},
+            {w:"afraid",m:"害怕的"},{w:"after",m:"在...之後"},{w:"afternoon",m:"下午"},{w:"again",m:"再一次"},{w:"age",m:"年齡"},
+            {w:"ago",m:"以前"},{w:"agree",m:"同意"},{w:"ahead",m:"在前方"},{w:"air",m:"空氣"},{w:"airplane",m:"飛機"},
+            {w:"airport",m:"機場"},{w:"all",m:"全部的"},{w:"almost",m:"幾乎"},{w:"along",m:"沿著"},{w:"already",m:"已經"},
+            {w:"also",m:"也"},{w:"always",m:"總是"},{w:"a.m.",m:"上午"},{w:"America",m:"美國"},{w:"American",m:"美國人;美國的"},
+            {w:"and",m:"和"},{w:"angry",m:"生氣的"},{w:"animal",m:"動物"},{w:"another",m:"另一個的"},{w:"answer",m:"回答"},
+            {w:"ant",m:"螞蟻"},{w:"any",m:"任何的"},{w:"anyone",m:"任何人"},{w:"anything",m:"任何事物"},{w:"apartment",m:"公寓"},
+            {w:"appear",m:"出現"},{w:"apple",m:"蘋果"},{w:"April",m:"四月"},{w:"arm",m:"手臂,武裝"},{w:"around",m:"在...四周"},
+            {w:"arrive",m:"到達"}, {w:"art",m:"美術"}, {w:"as",m:"與...一樣"}, {w:"ask",m:"問"}, {w:"at",m:"在"},
+            {w:"August",m:"八月"}, {w:"aunt",m:"伯(叔)母"}, {w:"autumn",m:"秋天"}, {w:"away",m:"遠離"}, {w:"baby",m:"嬰兒"},
+            {w:"back",m:"在...後面"}, {w:"bad",m:"壞的"}, {w:"badminton",m:"羽毛球"}, {w:"bag",m:"袋子"}, {w:"bake",m:"烘烤"},
+            {w:"bakery",m:"麵包店"}, {w:"balcony",m:"陽台"}, {w:"ball",m:"球"}, {w:"banana",m:"香蕉"}, {w:"band",m:"樂團"},
+            {w:"bank",m:"銀行"}, {w:"barbecue",m:"烤肉"}, {w:"baseball",m:"棒球"}, {w:"basket",m:"籃子"}, {w:"basketball",m:"籃球"},
+            {w:"bat",m:"蝙蝠"}, {w:"bath",m:"洗澡"}, {w:"bathroom",m:"浴室"}, {w:"be",m:"是"}, {w:"beach",m:"海灘"},
+            {w:"bean",m:"豆"}, {w:"bear",m:"熊"}, {w:"beautiful",m:"美麗的"}, {w:"because",m:"因為"}, {w:"become",m:"變成"},
+            {w:"bed",m:"床"}, {w:"bedroom",m:"臥室"}, {w:"bee",m:"蜜蜂"}, {w:"beef",m:"牛肉"}, {w:"before",m:"在...之前"},
+            {w:"begin",m:"開始"}, {w:"behind",m:"在...後面"}, {w:"believe",m:"相信"}, {w:"bell",m:"鈴"}, {w:"belong",m:"屬於"},
+            {w:"below",m:"在...下方"}, {w:"belt",m:"皮帶"}, {w:"bench",m:"長椅"}, {w:"beside",m:"在...旁邊"}, {w:"between",m:"在...之間"},
+            {w:"bike",m:"腳踏車"}, {w:"big",m:"大的"}, {w:"bird",m:"鳥"}, {w:"birthday",m:"生日"}, {w:"bite",m:"咬"},
+            {w:"black",m:"黑色(的)"}, {w:"blackboard",m:"黑板"}, {w:"blanket",m:"毯子"}, {w:"blind",m:"瞎的"}, {w:"block",m:"街區"},
+            {w:"blow",m:"吹"}, {w:"blue",m:"藍色(的)"}, {w:"boat",m:"船"}, {w:"body",m:"身體"}, {w:"boil",m:"煮沸"},
+            {w:"book",m:"書"}, {w:"bookstore",m:"書店"}, {w:"bored",m:"感到厭煩的"}, {w:"boring",m:"無聊的"}, {w:"born",m:"出生"},
+            {w:"borrow",m:"借入"}, {w:"boss",m:"老板"}, {w:"both",m:"兩者都"}, {w:"bottle",m:"瓶子"}, {w:"bottom",m:"底部"},
+            {w:"bow",m:"敬禮"}, {w:"bowl",m:"碗"}, {w:"box",m:"盒子"}, {w:"boy",m:"男孩"}, {w:"bread",m:"麵包"},
+            {w:"break",m:"打破"}, {w:"breakfast",m:"早餐"}, {w:"bridge",m:"橋"}, {w:"bright",m:"明亮的"}, {w:"bring",m:"帶來"},
+            {w:"brother",m:"兄弟"}, {w:"brown",m:"棕色(的)"}, {w:"brush",m:"刷"}, {w:"bug",m:"小蟲"}, {w:"build",m:"建造"},
+            {w:"bun",m:"小圓麵包"}, {w:"burn",m:"燃燒"}, {w:"bus",m:"公車"}, {w:"business",m:"生意"}, {w:"businessman",m:"商人"},
+            {w:"busy",m:"忙碌的"}, {w:"but",m:"但是"}, {w:"butter",m:"奶油"}, {w:"butterfly",m:"蝴蝶"}, {w:"buy",m:"買"},
+            {w:"by",m:"藉著"}, {w:"cage",m:"籠子"}, {w:"cake",m:"蛋糕"}, {w:"call",m:"打電話"}, {w:"camera",m:"照相機"},
+            {w:"camp",m:"露營"}, {w:"can",m:"能夠"}, {w:"candle",m:"蠟燭"}, {w:"candy",m:"糖果"}, {w:"cap",m:"(無邊)帽"},
+            {w:"car",m:"車子"}, {w:"card",m:"卡片"}, {w:"care",m:"關心"}, {w:"careful",m:"仔細的"}, {w:"carry",m:"攜帶"},
+            {w:"case",m:"情形"}, {w:"castle",m:"城堡"}, {w:"cat",m:"貓"}, {w:"catch",m:"趕上"}, {w:"celebrate",m:"慶祝"},
+            {w:"cell phone",m:"手機"}, {w:"cent",m:"〈一〉分錢"}, {w:"center",m:"中心"}, {w:"centimeter",m:"公分"}, {w:"chair",m:"椅子"},
+            {w:"chalk",m:"粉筆"}, {w:"chance",m:"機會"}, {w:"change",m:"交換,零錢"}, {w:"cheap",m:"便宜的"}, {w:"cheat",m:"欺騙"},
+            {w:"check",m:"檢查"}, {w:"cheer",m:"歡呼"}, {w:"cheese",m:"乳酪"}, {w:"chess",m:"西洋棋"}, {w:"chicken",m:"雞肉"},
+            {w:"child",m:"小孩"}, {w:"China",m:"中國"}, {w:"Chinese",m:"中國人,中文"}, {w:"chocolate",m:"巧克力"}, {w:"choose",m:"選擇"},
+            {w:"chopsticks",m:"筷子"}, {w:"Christmas",m:"聖誕節"}, {w:"church",m:"教堂"}, {w:"circle",m:"圓圈"}, {w:"city",m:"城市"},
+            {w:"clap",m:"拍手"}, {w:"class",m:"班級"}, {w:"classmate",m:"同班同學"}, {w:"classroom",m:"教室"}, {w:"clean",m:"打掃"},
+            {w:"clear",m:"清楚的"}, {w:"clerk",m:"店員"}, {w:"climb",m:"爬"}, {w:"clock",m:"時鐘"}, {w:"close",m:"關上"},
+            {w:"clothes",m:"衣服"}, {w:"cloudy",m:"多雲的"}, {w:"club",m:"社團"}, {w:"coat",m:"大衣"}, {w:"coffee",m:"咖啡"},
+            {w:"Coke",m:"可樂"}, {w:"cold",m:"寒冷的"}, {w:"collect",m:"收集"}, {w:"color",m:"顏色"}, {w:"come",m:"來"},
+            {w:"comb",m:"梳子"}, {w:"comfortable",m:"舒適的"}, {w:"comic",m:"連環漫畫"}, {w:"common",m:"共同的"}, {w:"computer",m:"電腦"},
+            {w:"convenient",m:"方便的"}, {w:"cook",m:"煮飯"}, {w:"cookie",m:"餅乾"}, {w:"cool",m:"涼爽的"}, {w:"copy",m:"抄寫,複製"},
+            {w:"corner",m:"角落"}, {w:"correct",m:"正確的"}, {w:"cost",m:"價值"}, {w:"couch",m:"沙發"}, {w:"count",m:"計算"},
+            {w:"country",m:"鄉村"}, {w:"course",m:"課程"}, {w:"cousin",m:"堂,表兄弟姊妹"}, {w:"cover",m:"覆蓋,封面,掩護"}, {w:"cow",m:"母牛"},
+            {w:"cowboy",m:"牛仔"}, {w:"crazy",m:"瘋狂的"}, {w:"cross",m:"越過"}, {w:"cry",m:"哭"}, {w:"cup",m:"茶杯"},
+            {w:"cut",m:"切"}, {w:"cute",m:"可愛的"}, {w:"dance",m:"跳舞"}, {w:"dangerous",m:"危險的"}, {w:"dark",m:"黑暗的"},
+            {w:"date",m:"日期"}, {w:"daughter",m:"女兒"}, {w:"day",m:"日子"}, {w:"dead",m:"死的"}, {w:"dear",m:"親愛的"},
+            {w:"December",m:"十二月"}, {w:"decide",m:"決定"}, {w:"delicious",m:"美味的"}, {w:"dentist",m:"牙醫"}, {w:"department store",m:"百貨公司"},
+            {w:"desk",m:"書桌"}, {w:"dictionary",m:"字典"}, {w:"die",m:"死掉"}, {w:"different",m:"不同的"}, {w:"difficult",m:"困難的"},
+            {w:"dig",m:"挖掘"}, {w:"dining room",m:"飯廳"}, {w:"dinner",m:"晚餐"}, {w:"dirty",m:"骯髒的"}, {w:"dish",m:"盤子,菜餚"},
+            {w:"do",m:"做"}, {w:"doctor",m:"醫生"}, {w:"dodge ball",m:"躲避球"}, {w:"dog",m:"狗"}, {w:"doll",m:"洋娃娃"},
+            {w:"dollar",m:"元"}, {w:"door",m:"門"}, {w:"dot",m:"點"}, {w:"down",m:"向下"}, {w:"dozen",m:"〈一〉打"},
+            {w:"dragon",m:"龍"}, {w:"draw",m:"畫"}, {w:"drawer",m:"抽屜"}, {w:"dream",m:"〈做)夢"}, {w:"dress",m:"洋裝"},
+            {w:"drink",m:"喝"}, {w:"drive",m:"駕駛"}, {w:"driver",m:"駕駛人"}, {w:"drop",m:"掉落"}, {w:"drum",m:"鼓"},
+            {w:"dry",m:"乾的"}, {w:"duck",m:"鴨"}, {w:"dumpling",m:"包餡食物,餃子"}, {w:"during",m:"在...期間"}, {w:"each",m:"每一〈的〉"},
+            {w:"ear",m:"耳朵"}, {w:"early",m:"早的"}, {w:"earth",m:"地球"}, {w:"east",m:"東方"}, {w:"Easter",m:"復活節"},
+            {w:"easy",m:"容易的"}, {w:"eat",m:"吃"}, {w:"egg",m:"蛋"}, {w:"eight",m:"八"}, {w:"eighteen",m:"十八"},
+            {w:"eighth",m:"第八"}, {w:"eighty",m:"八十"}, {w:"either",m:"也不"}, {w:"elementary school",m:"小學"}, {w:"elephant",m:"大象"},
+            {w:"eleven",m:"十一"}, {w:"eleventh",m:"第十一(的)"}, {w:"else",m:"其他的"}, {w:"e-mail",m:"電子郵件"}, {w:"end",m:"結束"},
+            {w:"engineer",m:"工程師"}, {w:"English",m:"英語"}, {w:"enjoy",m:"喜愛"}, {w:"enough",m:"足夠的"}, {w:"enter",m:"進入"},
+            {w:"envelope",m:"信"}, {w:"eraser",m:"橡皮擦"}, {w:"eve",m:"前夕"}, {w:"even",m:"甚至"}, {w:"evening",m:"傍晚"},
+            {w:"ever",m:"曾經"}, {w:"every",m:"每一個(的)"}, {w:"everyone",m:"每一個人"}, {w:"everything",m:"每件事"}, {w:"example",m:"例子"},
+            {w:"excellent",m:"極好的"}, {w:"except",m:"除了...之外"}, {w:"excited",m:"感到興奮的"}, {w:"exciting",m:"令人興奮的"}, {w:"excuse",m:"原諒"},
+            {w:"exercise",m:"運動"}, {w:"expensive",m:"昂貴的"}, {w:"experience",m:"經驗"}, {w:"eye",m:"眼睛"}, {w:"face",m:"臉孔,面對"},
+            {w:"fact",m:"事實"}, {w:"factory",m:"工廠"}, {w:"fail",m:"失敗"}, {w:"fall",m:"秋天"}, {w:"family",m:"家庭"},
+            {w:"famous",m:"有名的"}, {w:"fan",m:"扇子,擁護者"}, {w:"far",m:"遠的"}, {w:"farm",m:"農田"}, {w:"farmer",m:"農夫"},
+            {w:"fast",m:"快的"}, {w:"fat",m:"胖的"}, {w:"father",m:"父親"}, {w:"favorite",m:"最喜愛的"}, {w:"February",m:"二月"},
+            {w:"feed",m:"餵"}, {w:"feel",m:"覺得"}, {w:"festival",m:"節慶"}, {w:"fever",m:"發燒"}, {w:"few",m:"少數的"},
+            {w:"fifteen",m:"十五"}, {w:"fifteenth",m:"第十五(的)"}, {w:"fifth",m:"第五(的)"}, {w:"fifty",m:"五十"}, {w:"fight",m:"打架"},
+            {w:"fill",m:"裝滿"}, {w:"finally",m:"最後"}, {w:"find",m:"找到"}, {w:"fine",m:"很好的"}, {w:"finger",m:"手指"},
+            {w:"finish",m:"完成"}, {w:"fire",m:"火焰,開火"}, {w:"first",m:"第一(的)"}, {w:"fish",m:"魚"}, {w:"fisherman",m:"漁夫"},
+            {w:"five",m:"五"}, {w:"fix",m:"修理"}, {w:"floor",m:"地板"}, {w:"flower",m:"花朵"}, {w:"flute",m:"笛"},
+            {w:"fly",m:"飛"}, {w:"follow",m:"遵循,跟隨"}, {w:"food",m:"食物"}, {w:"foot",m:"腳"}, {w:"for",m:"為了"},
+            {w:"foreign",m:"外國的"}, {w:"foreigner",m:"外國人"}, {w:"forget",m:"忘記"}, {w:"fork",m:"叉子"}, {w:"forty",m:"四十"},
+            {w:"four",m:"四"}, {w:"fourteen",m:"十四"}, {w:"fourteenth",m:"第十四(的)"}, {w:"fourth",m:"第四(的)"}, {w:"fox",m:"狐狸"},
+            {w:"free",m:"空閒的,免費"}, {w:"French fries",m:"炸薯條"}, {w:"fresh",m:"新鮮的"}, {w:"Friday",m:"星期五"}, {w:"friend",m:"朋友"},
+            {w:"friendly",m:"友善的"}, {w:"frisbee",m:"飛盤"}, {w:"frog",m:"青蛙"}, {w:"from",m:"從"}, {w:"front",m:"前面"},
+            {w:"fruit",m:"水果"}, {w:"fry",m:"油炸"}, {w:"full",m:"滿的"}, {w:"fun",m:"樂趣"}, {w:"funny",m:"好笑的"},
+            {w:"future",m:"未來"}, {w:"game",m:"比賽,遊戲"}, {w:"garbage",m:"垃圾"}, {w:"garden",m:"花園"}, {w:"gas",m:"瓦斯"},
+            {w:"gate",m:"大門"}, {w:"get",m:"得到"}, {w:"ghost",m:"鬼"}, {w:"giant",m:"巨大的,巨人"}, {w:"gift",m:"禮物"},
+            {w:"girl",m:"女孩"}, {w:"give",m:"給予"}, {w:"glad",m:"高興的"}, {w:"glass",m:"玻璃,玻璃杯"}, {w:"glasses",m:"眼鏡"},
+            {w:"glove",m:"手套"}, {w:"glue",m:"膠水"}, {w:"go",m:"去"}, {w:"goat",m:"山羊"}, {w:"good",m:"好的"},
+            {w:"goodbye",m:"再見"}, {w:"goose",m:"鵝"}, {w:"grade",m:"成績,年級"}, {w:"gram",m:"公克"}, {w:"grandfather",m:"祖父"},
+            {w:"grandmother",m:"祖母"}, {w:"grape",m:"葡萄"}, {w:"grass",m:"草"}, {w:"gray",m:"灰色的"}, {w:"great",m:"很棒的"},
+            {w:"green",m:"綠色(的)"}, {w:"ground",m:"地面"}, {w:"group",m:"團體"}, {w:"grow",m:"種植"}, {w:"guava",m:"番石榴"},
+            {w:"guess",m:"猜想"}, {w:"guitar",m:"吉他"}, {w:"guy",m:"傢伙"}, {w:"gym",m:"體育館"}, {w:"habit",m:"習慣"},
+            {w:"hair",m:"頭髮"}, {w:"half",m:"一半"}, {w:"Halloween",m:"萬聖節"}, {w:"ham",m:"火腿"}, {w:"hamburger",m:"漢堡"},
+            {w:"hand",m:"手"}, {w:"handsome",m:"英俊的"}, {w:"hang",m:"懸掛"}, {w:"happen",m:"發生"}, {w:"happy",m:"快樂的"},
+            {w:"hard",m:"困難的,硬的"}, {w:"hard-working",m:"努力工作的"}, {w:"hat",m:"帽子"}, {w:"hate",m:"討厭"}, {w:"have",m:"有"},
+            {w:"he",m:"他"}, {w:"head",m:"頭"}, {w:"headache",m:"頭痛"}, {w:"health",m:"健康"}, {w:"healthy",m:"健康的"},
+            {w:"hear",m:"聽"}, {w:"heart",m:"心"}, {w:"heat",m:"熱度,加熱"}, {w:"heavy",m:"重的"}, {w:"hello",m:"喂"},
+            {w:"help",m:"幫忙"}, {w:"helpful",m:"有幫助的"}, {w:"hen",m:"母雞"}, {w:"here",m:"這裡"}, {w:"hey",m:"嘿"},
+            {w:"hi",m:"嗨"}, {w:"hide",m:"隱藏"}, {w:"high",m:"高的"}, {w:"hike",m:"徒步旅行"}, {w:"hill",m:"小山"},
+            {w:"hippo",m:"河馬"}, {w:"history",m:"歷史"}, {w:"hit",m:"打擊"}, {w:"hobby",m:"嗜好"}, {w:"hold",m:"拿著"},
+            {w:"holiday",m:"假日"}, {w:"home",m:"家"}, {w:"homework",m:"家庭作業"}, {w:"honest",m:"誠實的"}, {w:"honey",m:"蜂蜜"},
+            {w:"hop",m:"(單腳)跳"}, {w:"hope",m:"希望"}, {w:"horse",m:"馬"}, {w:"hospital",m:"醫院"}, {w:"hot",m:"熱的"},
+            {w:"hot dog",m:"熱狗"}, {w:"hotel",m:"旅社"}, {w:"hour",m:"小時"}, {w:"house",m:"房屋"}, {w:"housewife",m:"家庭主婦"},
+            {w:"how",m:"如何"}, {w:"however",m:"然而"}, {w:"hundred",m:"百"}, {w:"hungry",m:"飢餓的"}, {w:"hunt",m:"打獵"},
+            {w:"hurry",m:"趕忙"}, {w:"hurt",m:"受傷,疼痛"}, {w:"husband",m:"丈夫"}, {w:"I",m:"我"}, {w:"ice",m:"冰"},
+            {w:"ice cream",m:"冰淇淋"}, {w:"idea",m:"主意"}, {w:"if",m:"如果"}, {w:"important",m:"重要的"}, {w:"in",m:"在...裡面"},
+            {w:"Insect",m:"昆蟲"}, {w:"inside",m:"在...內部"}, {w:"interest",m:"使...感興趣"}, {w:"interested",m:"感興趣的"}, {w:"interesting",m:"有趣的"},
+            {w:"interview",m:"訪問,面試"}, {w:"Internet",m:"網路"}, {w:"into",m:"到...之內"}, {w:"invite",m:"邀請"}, {w:"island",m:"島嶼"},
+            {w:"it",m:"它"}, {w:"jacket",m:"夾克"}, {w:"January",m:"一月"}, {w:"jeans",m:"牛仔褲"}, {w:"job",m:"工作"},
+            {w:"jog",m:"慢跑"}, {w:"join",m:"加入"}, {w:"joy",m:"歡樂"}, {w:"juice",m:"果汁"}, {w:"July",m:"七月"},
+            {w:"jump",m:"跳躍"}, {w:"June",m:"六月"}, {w:"junior high school",m:"國中"}, {w:"just",m:"只是,剛才"}, {w:"kangaroo",m:"袋鼠"},
+            {w:"keep",m:"保持"}, {w:"key",m:"鑰匙"}, {w:"kick",m:"踢"}, {w:"kid",m:"小孩"}, {w:"kill",m:"殺"},
+            {w:"kilo(gram)",m:"公斤"}, {w:"kind",m:"種類"}, {w:"king",m:"國王"}, {w:"kiss",m:"吻"}, {w:"kitchen",m:"廚房"},
+            {w:"kite",m:"風箏"}, {w:"knee",m:"膝蓋"}, {w:"knife",m:"刀子"}, {w:"knock",m:"敲"}, {w:"know",m:"知道"},
+            {w:"knowledge",m:"知識"}, {w:"koala",m:"無尾熊"}, {w:"lake",m:"湖"}, {w:"lamp",m:"燈"}, {w:"land",m:"土地"},
+            {w:"language",m:"語言"}, {w:"lantern",m:"燈籠"}, {w:"large",m:"大的"}, {w:"last",m:"最後的"}, {w:"late",m:"晚的"},
+            {w:"later",m:"稍後"}, {w:"laugh",m:"笑"}, {w:"lawyer",m:"律師"}, {w:"lazy",m:"懶惰的"}, {w:"lead",m:"引導"},
+            {w:"leader",m:"領導者"}, {w:"learn",m:"學習"}, {w:"least",m:"最少〈的〉"}, {w:"leave",m:"離開"}, {w:"left",m:"左邊"},
+            {w:"leg",m:"腿"}, {w:"lemon",m:"檸檬"}, {w:"lend",m:"借出"}, {w:"less",m:"較少的"}, {w:"lesson",m:"課"},
+            {w:"let",m:"讓"}, {w:"letter",m:"信"}, {w:"lettuce",m:"萵苣"}, {w:"library",m:"圖書館"}, {w:"lid",m:"蓋子"},
+            {w:"lie",m:"說謊"}, {w:"life",m:"生活"}, {w:"light",m:["燈光","輕的","點燃"]}, {w:"like",m:"喜歡"}, {w:"line",m:"隊伍,線條"},
+            {w:"lion",m:"獅子"}, {w:"lip",m:"嘴唇"}, {w:"list",m:"表,名單"}, {w:"listen",m:"聽"}, {w:"little",m:"小的"},
+            {w:"live",m:"住,活的,實況"}, {w:"living room",m:"客廳"}, {w:"lonely",m:"寂寞的"}, {w:"long",m:"長的"}, {w:"look",m:"看"},
+            {w:"lose",m:"遺失"}, {w:"loud",m:"大聲的"}, {w:"love",m:"喜愛"}, {w:"lovely",m:"可愛的"}, {w:"low",m:"低的"},
+            {w:"lucky",m:"幸運的"}, {w:"lunch",m:"午餐"}, {w:"machine",m:"機器"}, {w:"mad",m:"瘋狂的"}, {w:"magic",m:"神奇的,魔術"},
+            {w:"mail",m:"信件"}, {w:"mailman",m:"郵差"}, {w:"make",m:"製作"}, {w:"man",m:"男人"}, {w:"many",m:"許多的"},
+            {w:"map",m:"地圖"}, {w:"March",m:"三月"}, {w:"mark",m:"做記號"}, {w:"marker",m:"簽字筆"}, {w:"market",m:"市場"},
+            {w:"married",m:"已婚的"}, {w:"mask",m:"面具"}, {w:"mat",m:"墊子"}, {w:"math",m:"數學"}, {w:"matter",m:"事情"},
+            {w:"may",m:"可能"}, {w:"May",m:"五月"}, {w:"maybe",m:"也許"}, {w:"meal",m:"一餐"}, {w:"mean",m:"意指"},
+            {w:"meat",m:"肉"}, {w:"medicine",m:"藥"}, {w:"medium",m:"中號〈的〉"}, {w:"meet",m:"遇見"}, {w:"meeting",m:"會議"},
+            {w:"menu",m:"菜單,選單"}, {w:"mile",m:"英里,哩"}, {w:"milk",m:"牛奶"}, {w:"million",m:"百萬"}, {w:"mind",m:"介意"},
+            {w:"minute",m:"分鐘"}, {w:"Miss",m:"小姐"}, {w:"miss",m:"想念"}, {w:"mistake",m:"錯誤"}, {w:"modern",m:"現代化的"},
+            {w:"moment",m:"片刻"}, {w:"Monday",m:"星期一"}, {w:"money",m:"錢"}, {w:"monkey",m:"猴子"}, {w:"month",m:"月份"},
+            {w:"moon",m:"月亮"}, {w:"mop",m:"拖地"}, {w:"more",m:"更多的"}, {w:"morning",m:"早上"}, {w:"most",m:"大部分的"},
+            {w:"mother",m:"母親"}, {w:"motorcycle",m:"機車"}, {w:"mountain",m:"山"}, {w:"mouse",m:"老鼠"}, {w:"mouth",m:"嘴巴"},
+            {w:"move",m:"移動"}, {w:"movie",m:"電影"}, {w:"Mr.",m:"先生"}, {w:"Mrs.",m:"太太"}, {w:"MRT",m:"捷運"},
+            {w:"Ms.",m:"女士"}, {w:"much",m:"許多(不可數)"}, {w:"mud",m:"泥巴"}, {w:"museum",m:"博物館"}, {w:"music",m:"音樂"},
+            {w:"must",m:"必須"}, {w:"nail",m:"釘子"}, {w:"name",m:"名字"}, {w:"national",m:"國家的"}, {w:"near",m:"在...附近"},
+            {w:"neck",m:"脖子"}, {w:"need",m:"需要"}, {w:"neighbor",m:"鄰居"}, {w:"never",m:"從不"}, {w:"new",m:"新的"},
+            {w:"news",m:"消息,新聞"}, {w:"next",m:"下一個"}, {w:"nice",m:"好的"}, {w:"night",m:"晚上"}, {w:"nine",m:"九"},
+            {w:"nineteen",m:"十九"}, {w:"nineteenth",m:"第十九"}, {w:"ninety",m:"九十"}, {w:"ninth",m:"第九"}, {w:"no",m:"沒有,不是"},
+            {w:"nobody",m:"沒有人"}, {w:"nod",m:"點頭"}, {w:"noise",m:"噪音"}, {w:"noodle",m:"麵條"}, {w:"noon",m:"中午"},
+            {w:"north",m:"北方"}, {w:"nose",m:"鼻子"}, {w:"not",m:"不,不是"}, {w:"note",m:"筆記"}, {w:"notebook",m:"筆記本,筆電"},
+            {w:"nothing",m:"沒東西,沒事"}, {w:"notice",m:"注意到"}, {w:"November",m:"十一月"}, {w:"now",m:"現在"}, {w:"number",m:"號碼"},
+            {w:"nurse",m:"護士"}, {w:"o'clock",m:"點鐘"}, {w:"October",m:"十月"}, {w:"of",m:"...的"}, {w:"off",m:"自...離開"},
+            {w:"office",m:"辦公室"}, {w:"officer",m:"官員"}, {w:"often",m:"時常"}, {w:"oil",m:"油"}, {w:"OK",m:"可以"},
+            {w:"old",m:"老的"}, {w:"on",m:"在...上面"}, {w:"once",m:"一次"}, {w:"one",m:"一"}, {w:"only",m:"只有"},
+            {w:"open",m:"打開,開放"}, {w:"or",m:"或"}, {w:"orange",m:"柳橙"}, {w:"order",m:"點餐,秩序"}, {w:"other",m:"其他的"},
+            {w:"out",m:"在外"}, {w:"outside",m:"在...外部"}, {w:"over",m:"結束"}, {w:"own",m:"自己的"}, {w:"ox",m:"公牛"},
+            {w:"pack",m:"包"}, {w:"package",m:"包裹"}, {w:"page",m:"頁"}, {w:"paint",m:"繪畫"}, {w:"pair",m:"一雙"},
+            {w:"pants",m:"長褲"}, {w:"papaya",m:"木瓜"}, {w:"paper",m:"紙"}, {w:"parent(s)",m:"父(母)親"}, {w:"park",m:"公園"},
+            {w:"part",m:"部分"}, {w:"party",m:"派對"}, {w:"pass",m:"通過"}, {w:"past",m:"經過"}, {w:"paste",m:"黏貼,漿糊"},
+            {w:"pay",m:"付錢"}, {w:"PE(physical education)",m:"體育"}, {w:"peach",m:"桃子"}, {w:"pear",m:"梨子"}, {w:"pen",m:"筆"},
+            {w:"pencil",m:"鉛筆"}, {w:"people",m:"人們,人民"}, {w:"perhaps",m:"或許"}, {w:"person",m:"人"}, {w:"pet",m:"寵物"},
+            {w:"photo",m:"相片"}, {w:"piano",m:"鋼琴"}, {w:"pick",m:"撿拾"}, {w:"picnic",m:"野餐"}, {w:"picture",m:"圖片,照片"},
+            {w:"pie",m:"派"}, {w:"piece",m:"片"}, {w:"pig",m:"豬"}, {w:"pin",m:"大頭針"}, {w:"pink",m:"粉紅色(的)"},
+            {w:"pipe",m:"管"}, {w:"pizza",m:"披薩"}, {w:"place",m:"地方"}, {w:"plan",m:"計畫"}, {w:"planet",m:"行星"},
+            {w:"plant",m:"植物"}, {w:"plate",m:"盤子"}, {w:"play",m:"玩"}, {w:"player",m:"球員,玩家"}, {w:"playground",m:"操場"},
+            {w:"pleasure",m:"樂趣,使高興"}, {w:"please",m:"請"}, {w:"p.m.",m:"下午"}, {w:"pocket",m:"口袋"}, {w:"point",m:"指著,得分"},
+            {w:"police",m:"警察"}, {w:"polite",m:"有禮貌的"}, {w:"pond",m:"池塘"}, {w:"pool",m:"游泳池"}, {w:"poor",m:"貧困的,可憐的"},
+            {w:"popcorn",m:"爆米花"}, {w:"popular",m:"受歡迎的"}, {w:"pork",m:"豬肉"}, {w:"possible",m:"可能的"}, {w:"post office",m:"郵局"},
+            {w:"postcard",m:"明信片"}, {w:"pot",m:"罐,壺,鍋子"}, {w:"pound",m:"磅"}, {w:"practice",m:"練習"}, {w:"pray",m:"祈禱"},
+            {w:"prepare",m:"準備"}, {w:"present",m:"禮物"}, {w:"pretty",m:"漂亮的,非常"}, {w:"price",m:"價格"}, {w:"princess",m:"公主"},
+            {w:"prize",m:"獎品,獎金"}, {w:"problem",m:"問題"}, {w:"program",m:"節目"}, {w:"proud",m:"驕傲的"}, {w:"public",m:"公立的,公眾的"},
+            {w:"pull",m:"拉"}, {w:"pumpkin",m:"南瓜"}, {w:"purple",m:"紫色的"}, {w:"push",m:"推"}, {w:"put",m:"放"},
+            {w:"quarter",m:"15分鐘,1/4"}, {w:"queen",m:"皇后"}, {w:"question",m:"問題"}, {w:"quick",m:"迅速的"}, {w:"quiet",m:"安靜的"},
+            {w:"quite",m:"相當"}, {w:"quiz",m:"小考"}, {w:"rabbit",m:"兔子"}, {w:"race",m:"賽跑"}, {w:"radio",m:"收音機"},
+            {w:"railroad",m:"鐵路"}, {w:"rain",m:"下雨"}, {w:"rainbow",m:"彩虹"}, {w:"rainy",m:"下雨的"}, {w:"raise",m:"舉起,養育"},
+            {w:"rat",m:"(大)老鼠,鼠輩"}, {w:"read",m:"讀"}, {w:"ready",m:"準備好的"}, {w:"real",m:"真的"}, {w:"really",m:"真地"},
+            {w:"recorder",m:"錄音機"}, {w:"red",m:"紅色(的)"}, {w:"refrigerator",m:"冰箱"}, {w:"remember",m:"記得"}, {w:"repeat",m:"重複"},
+            {w:"reporter",m:"記者"}, {w:"rest",m:"休息"}, {w:"restaurant",m:"餐館"}, {w:"restroom",m:"洗手間"}, {w:"rice",m:"米飯"},
+            {w:"rich",m:"有錢的"}, {w:"ride",m:"騎"}, {w:"right",m:"右邊"}, {w:"ring",m:"戒指"}, {w:"river",m:"河"},
+            {w:"road",m:"道路"}, {w:"robot",m:"機器人"}, {w:"ROC",m:"中華民國"}, {w:"rock",m:"岩石"}, {w:"roll",m:"滾"},
+            {w:"room",m:"房間"}, {w:"roller-",m:"溜冰"}, {w:"rope",m:"繩子"}, {w:"rose",m:"玫瑰"}, {w:"round",m:"圓形的"},
+            {w:"row",m:"划(船)"}, {w:"rule",m:"規則"}, {w:"ruler",m:"尺"}, {w:"run",m:"跑"}, {w:"sad",m:"悲傷的"},
+            {w:"safe",m:"安全的"}, {w:"sail",m:"航行"}, {w:"salad",m:"沙拉"}, {w:"sale",m:"出售"}, {w:"salesman",m:"推銷員"},
+            {w:"salt",m:"鹽"}, {w:"same",m:"相同的"}, {w:"sandwich",m:"三明治"}, {w:"Saturday",m:"星期六"}, {w:"sacred",m:"神聖的"},
+            {w:"save",m:"節省,挽救"}, {w:"say",m:"說"}, {w:"school",m:"學校"}, {w:"science",m:"科學"}, {w:"scooter",m:"速克達機車"},
+            {w:"screen",m:"螢幕"}, {w:"sea",m:"海"}, {w:"season",m:"季節"}, {w:"seat",m:"座位"}, {w:"second",m:"第二(的)"},
+            {w:"secretary",m:"秘書"}, {w:"see",m:"看"}, {w:"seed",m:"種子"}, {w:"seesaw",m:"蹺蹺板"}, {w:"seldom",m:"很少"},
+            {w:"sell",m:"賣"}, {w:"send",m:"寄"}, {w:"senior high school",m:"高中"}, {w:"sentence",m:"句子"}, {w:"September",m:"九月"},
+            {w:"serious",m:"嚴重的"}, {w:"(TV) set",m:"(電視)機"}, {w:"seven",m:"七"}, {w:"seventeen",m:"十七"}, {w:"seventeenth",m:"第十七(的)"},
+            {w:"seventh",m:"第七(的)"}, {w:"seventy",m:"七十"}, {w:"several",m:"幾個的"}, {w:"shake",m:"搖動"}, {w:"shall",m:"將會,好嗎?"},
+            {w:"shape",m:"形狀"}, {w:"share",m:"分享"}, {w:"shark",m:"鯊魚"}, {w:"she",m:"她"}, {w:"sheep",m:"綿羊"},
+            {w:"ship",m:"船"}, {w:"shirt",m:"襯衫"}, {w:"shoe(s)",m:"鞋子"}, {w:"shop",m:"商店"}, {w:"shopkeeper",m:"店主"},
+            {w:"short",m:"短的"}, {w:"shorts",m:"短褲"}, {w:"should",m:"應該"}, {w:"shoulder",m:"肩膀"}, {w:"shout",m:"喊叫"},
+            {w:"show",m:"指示,表演"}, {w:"shy",m:"害羞的"}, {w:"sick",m:"生病的"}, {w:"side",m:"旁邊,邊,面"}, {w:"sidewalk",m:"人行道"},
+            {w:"sight",m:"視力"}, {w:"sign",m:"標誌"}, {w:"simple",m:"簡單的"}, {w:"since",m:"自從"}, {w:"sing",m:"唱歌"},
+            {w:"singer",m:"歌手"}, {w:"sir",m:"先生"}, {w:"sister",m:"姊妹"}, {w:"sit",m:"坐"}, {w:"six",m:"六"},
+            {w:"sixteen",m:"十六"}, {w:"sixteenth",m:"第十六(的)"}, {w:"sixth",m:"第六(的)"}, {w:"sixty",m:"六十"}, {w:"size",m:"尺寸"},
+            {w:"skate",m:"溜冰"}, {w:"skirt",m:"裙子"}, {w:"sky",m:"天空"}, {w:"sleep",m:"睡覺"}, {w:"slide",m:"滑坡,滑動"},
+            {w:"slim",m:"苗條的"}, {w:"slow",m:"慢的"}, {w:"small",m:"小的"}, {w:"smart",m:"聰明的"}, {w:"smell",m:"聞起來"},
+            {w:"smile",m:"微笑"}, {w:"smoke",m:"煙霧,抽菸"}, {w:"snack",m:"點心"}, {w:"snake",m:"蛇"}, {w:"snow",m:"下雪"},
+            {w:"snowman",m:"雪人"}, {w:"snowy",m:"下雪的"}, {w:"so",m:"如此地"}, {w:"soccer",m:"足球"}, {w:"socks",m:"襪子"},
+            {w:"sofa",m:"沙發"}, {w:"soldier",m:"軍人"}, {w:"some",m:"一些"}, {w:"someone",m:"某人"}, {w:"something",m:"某事"},
+            {w:"sometimes",m:"有時候"}, {w:"somewhere",m:"某處"}, {w:"son",m:"兒子"}, {w:"song",m:"歌曲"}, {w:"soon",m:"不久,即將"},
+            {w:"sore",m:"疼痛的"}, {w:"sorry",m:"抱歉〈的〉"}, {w:"sound",m:"聲音,聽起來"}, {w:"soup",m:"湯"}, {w:"south",m:"南方"},
+            {w:"space",m:"空間"}, {w:"spaghetti",m:"義大利麵"}, {w:"speak",m:"說"}, {w:"special",m:"特別的"}, {w:"spell",m:"拼字"},
+            {w:"spend",m:"花(錢,時間)"}, {w:"spider",m:"蜘蛛"}, {w:"spoon",m:"湯匙"}, {w:"sport",m:"運動"}, {w:"spring",m:["春天","彈簧","跳躍"]},
+            {w:"square",m:"正方形的"}, {w:"stairs",m:"樓梯"}, {w:"stamp",m:"郵票"}, {w:"stand",m:"站立"}, {w:"star",m:"星星"},
+            {w:"start",m:"開始"}, {w:"station",m:"車站,站,局"}, {w:"stay",m:"停留"}, {w:"(beef) steak",m:"(牛)排"}, {w:"still",m:"仍然"},
+            {w:"stomach",m:"胃"}, {w:"stop",m:"停"}, {w:"store",m:"商店"}, {w:"straight",m:"直的"}, {w:"story",m:"故事"},
+            {w:"strange",m:"奇怪的"}, {w:"stranger",m:"陌生人"}, {w:"strawberry",m:"草莓"}, {w:"street",m:"街道"}, {w:"strong",m:"強壯的"},
+            {w:"student",m:"學生"}, {w:"study",m:"研讀,學習"}, {w:"stupid",m:"笨的"}, {w:"subject",m:"科目"}, {w:"successful",m:"成功的"},
+            {w:"sugar",m:"糖"}, {w:"summer",m:"夏天"}, {w:"sun",m:"太陽"}, {w:"Sunday",m:"星期日"}, {w:"sunny",m:"晴朗的"},
+            {w:"supermarket",m:"超級市場"}, {w:"sure",m:"確定的"}, {w:"surf",m:"衝浪"}, {w:"surprise",m:"使...驚訝"}, {w:"surprised",m:"感到驚訝的"},
+            {w:"sweater",m:"毛衣"}, {w:"sweet",m:"甜的"}, {w:"swim",m:"游泳"}, {w:"swing",m:"鞦韆,搖擺"}, {w:"table",m:"桌子"},
+            {w:"tail",m:"尾巴"}, {w:"Taiwan",m:"臺灣"}, {w:"take",m:"拿"}, {w:"talk",m:"說話"}, {w:"tall",m:"高的"},
+            {w:"tape",m:"錄音帶"}, {w:"taste",m:"品嚐"}, {w:"taxi",m:"計程車"}, {w:"tea",m:"茶"}, {w:"teach",m:"教導"},
+            {w:"teacher",m:"教師"}, {w:"team",m:"團隊"}, {w:"teenager",m:"青少年"}, {w:"telephone",m:"電話"}, {w:"television",m:"電視"},
+            {w:"tell",m:"告訴"}, {w:"temple",m:"寺廟"}, {w:"ten",m:"十"}, {w:"tennis",m:"網球"}, {w:"tenth",m:"第十〈的〉"},
+            {w:"terrible",m:"可怕的"}, {w:"test",m:"考試,測試"}, {w:"than",m:"比..."}, {w:"thank",m:"謝謝"}, {w:"that",m:"那個"},
+            {w:"the",m:"這/那"}, {w:"theater",m:"戲院"}, {w:"then",m:"那時"}, {w:"there",m:"那裡"}, {w:"these",m:"這些"},
+            {w:"they",m:"他們"}, {w:"thick",m:"厚的"}, {w:"thin",m:"瘦的"}, {w:"thing",m:"事情"}, {w:"think",m:"想,思考"},
+            {w:"third",m:"第三(的)"}, {w:"thirsty",m:"口渴的"}, {w:"thirteen",m:"十三"}, {w:"thirteenth",m:"第十三"}, {w:"thirty",m:"三十"},
+            {w:"this",m:"這個"}, {w:"throat",m:"喉嚨"}, {w:"throw",m:"丟"}, {w:"those",m:"那些"}, {w:"though",m:"雖然"},
+            {w:"thousand",m:"千"}, {w:"three",m:"三"}, {w:"Thursday",m:"星期四"}, {w:"ticket",m:"票券"}, {w:"tidy",m:"整潔的"},
+            {w:"tiger",m:"老虎"}, {w:"tie",m:"領帶,捆,繫"}, {w:"time",m:"時間"}, {w:"tired",m:"疲倦的"}, {w:"to",m:"到"},
+            {w:"toast",m:"土司,烘烤"}, {w:"today",m:"今天"}, {w:"toe",m:"腳趾"}, {w:"together",m:"一起"}, {w:"tomato",m:"番茄"},
+            {w:"tomorrow",m:"明天"}, {w:"tonight",m:"今晚"}, {w:"too",m:"也,太..."}, {w:"tooth",m:"牙齒"}, {w:"top",m:"頂端"},
+            {w:"total",m:"總計"}, {w:"touch",m:"碰觸"}, {w:"towel",m:"毛巾"}, {w:"town",m:"城鎮"}, {w:"toy",m:"玩具"},
+            {w:"traffic",m:"交通"}, {w:"train",m:"火車"}, {w:"trash",m:"垃圾"}, {w:"treat",m:"請客,對待"}, {w:"tree",m:"樹"},
+            {w:"trick",m:"惡作劇"}, {w:"trip",m:"(短程)旅行"}, {w:"trouble",m:"麻煩"}, {w:"truck",m:"卡車"}, {w:"true",m:"真實的"},
+            {w:"try",m:"嘗試"}, {w:"T-shirt",m:"T恤"}, {w:"tub",m:"浴缸,洗澡"}, {w:"Tuesday",m:"星期二"}, {w:"turkey",m:"火雞"},
+            {w:"turn",m:"轉動,轉彎"}, {w:"turtle",m:"烏龜"}, {w:"twelfth",m:"第十二(的)"}, {w:"twelve",m:"十二"}, {w:"twenty",m:"二十"},
+            {w:"twentieth",m:"第二十(的)"}, {w:"twice",m:"兩次"}, {w:"two",m:"二"}, {w:"type",m:"打字"}, {w:"typhoon",m:"颱風"},
+            {w:"umbrella",m:"雨傘"}, {w:"uncle",m:"伯(叔)"}, {w:"under",m:"在...之下"}, {w:"understand",m:"了解"}, {w:"unhappy",m:"不快樂的"},
+            {w:"uniform",m:"制服"}, {w:"until",m:"直到"}, {w:"up",m:"向上"}, {w:"USA",m:"美國"}, {w:"use",m:"使用"},
+            {w:"useful",m:"有用的"}, {w:"usually",m:"通常"}, {w:"vacation",m:"假期"}, {w:"vegetable",m:"蔬菜"}, {w:"very",m:"非常"},
+            {w:"vest",m:"背心"}, {w:"video",m:"錄影帶"}, {w:"violin",m:"小提琴"}, {w:"visit",m:"參觀"}, {w:"voice",m:"聲音"},
+            {w:"wait",m:"等待"}, {w:"waiter",m:"男服務生"}, {w:"waitress",m:"女服務生"}, {w:"wake",m:"醒來"}, {w:"walk",m:"走路"},
+            {w:"wall",m:"牆壁"}, {w:"wallet",m:"皮夾"}, {w:"want",m:"想要"}, {w:"warm",m:"溫暖的"}, {w:"wash",m:"清洗"},
+            {w:"watch",m:"看"}, {w:"water",m:"水"}, {w:"watermelon",m:"西瓜"}, {w:"wave",m:"波浪"}, {w:"way",m:"道路,方法"},
+            {w:"we",m:"我們"}, {w:"weak",m:"弱的"}, {w:"wear",m:"穿"}, {w:"weather",m:"天氣"}, {w:"Wednesday",m:"星期三"},
+            {w:"week",m:"星期"}, {w:"weekend",m:"週末"}, {w:"welcome",m:"受歡迎的"}, {w:"well",m:"好地"}, {w:"west",m:"西方"},
+            {w:"wet",m:"濕的"}, {w:"whale",m:"鯨魚"}, {w:"what",m:"什麼"}, {w:"when",m:"何時"}, {w:"where",m:"何處"},
+            {w:"whether",m:"是否"}, {w:"which",m:"哪一個"}, {w:"white",m:"白色(的)"}, {w:"who",m:"誰"}, {w:"whose",m:"誰的"},
+            {w:"why",m:"為什麼"}, {w:"wife",m:"妻子"}, {w:"will",m:"將會..."}, {w:"win",m:"贏"}, {w:"wind",m:"風"},
+            {w:"window",m:"窗戶"}, {w:"windy",m:"多風的"}, {w:"winter",m:"冬天"}, {w:"wise",m:"明智的"}, {w:"wish",m:"祝福..."},
+            {w:"with",m:"和"}, {w:"without",m:"沒有"}, {w:"woman",m:"女人"}, {w:"wonderful",m:"極好的"}, {w:"word",m:"字"},
+            {w:"work",m:"工作"}, {w:"workbook",m:"作業本"}, {w:"worker",m:"工人"}, {w:"world",m:"世界"}, {w:"worry",m:"擔心"},
+            {w:"write",m:"寫"}, {w:"writer",m:"作家"}, {w:"wrong",m:"錯誤的"}, {w:"yard",m:"庭院"}, {w:"year",m:"年"},
+            {w:"yellow",m:"黃色(的)"}, {w:"yes",m:"是"}, {w:"yesterday",m:"昨天"}, {w:"yet",m:"尚未"}, {w:"you",m:"你(們)"},
+            {w:"young",m:"年輕的"}, {w:"yummy",m:"好吃的"}, {w:"zebra",m:"斑馬"}, {w:"zero",m:"零"}, {w:"zoo",m:"動物園"}
+        ],
+        advanced: [
+            {w:"absent",m:"缺席"}, {w:"accept",m:"接受"}, {w:"accident",m:"意外事件"}, {w:"active",m:"活潑的"}, {w:"activity",m:"活動"},
+            {w:"actually",m:"事實上"}, {w:"add",m:"加入"}, {w:"address",m:"地址/演講"}, {w:"admire",m:"愛慕"}, {w:"adult",m:"成人"},
+            {w:"advertisement",m:"廣告"}, {w:"advice",m:"忠告/勸告(名詞)"}, {w:"advise",m:"建議/規勸(動詞)"}, {w:"affect",m:"影響/感染"}, {w:"against",m:"反對"},
+            {w:"aim",m:"瞄準標的"}, {w:"air conditioner",m:"冷氣機"}, {w:"airlines",m:"航線/航空公司"}, {w:"alarm",m:"鬧鐘/警鈴"}, {w:"album",m:"相簿/專輯"},
+            {w:"alike",m:"相似的"}, {w:"alive",m:"活著的"}, {w:"allow",m:"允許"}, {w:"alone",m:"單獨的/獨自的"}, {w:"aloud",m:"大聲地"},
+            {w:"alphabet",m:"字母"}, {w:"altogether",m:"全部/合計"}, {w:"ambulance",m:"救護車"}, {w:"among",m:"在……(眾多)當中"}, {w:"amount",m:"總數/數量"},
+            {w:"ancient",m:"古代的"}, {w:"angel",m:"天使"}, {w:"anger",m:"生氣/怒氣"}, {w:"ankle",m:"腳踝"}, {w:"anywhere",m:"任何地方"},
+            {w:"apologize",m:"道歉/認錯(動詞)"}, {w:"appreciate",m:"感激/賞識"}, {w:"area",m:"區域"}, {w:"argue",m:"爭吵/爭辯"}, {w:"armchair",m:"扶手椅"},
+            {w:"army",m:"軍隊"}, {w:"arrange",m:"安排"}, {w:"artist",m:"藝術家"}, {w:"asleep",m:"睡著的"}, {w:"assistant",m:"助理"},
+            {w:"assume",m:"以為/假設"}, {w:"attention",m:"注意/專心力"}, {w:"available",m:"可用的/有空的"}, {w:"avoid",m:"避開/避免"}, {w:"baby sitter",m:"保母"},
+            {w:"backpack",m:"後背包"}, {w:"backward",m:"反向的"}, {w:"balloon",m:"氣球"}, {w:"barber",m:"理髮師"}, {w:"bark",m:"吠(狗叫)"},
+            {w:"basement",m:"地下室"}, {w:"basic",m:"基本的"}, {w:"bathe",m:"浸..澡(動詞)"}, {w:"beard",m:"鬍子/絡腮鬍"}, {w:"beat",m:"敲打(動詞)/節拍(名詞)"},
+            {w:"beauty",m:"美人/美麗(名詞)"}, {w:"beer",m:"啤酒"}, {w:"beginner",m:"基礎者"}, {w:"beginning",m:"開始"}, {w:"behave",m:"行為"},
+            {w:"besides",m:"除…之外"}, {w:"beyond",m:"超過…之外"}, {w:"bill",m:"紙鈔/帳單"}, {w:"biology",m:"生物學"}, {w:"bitter",m:"苦味的"},
+            {w:"blame",m:"責備"}, {w:"blank",m:"空白的/空格"}, {w:"bless",m:"祝福"}, {w:"blood",m:"血液"}, {w:"blouse",m:"襯衫(女用的)"},
+            {w:"board",m:"木板"}, {w:"bomb",m:"炸彈"}, {w:"bone",m:"骨頭"}, {w:"bookcase",m:"書架"}, {w:"bother",m:"打擾"},
+            {w:"bowling",m:"保齡球"}, {w:"branch",m:"樹枝/分店"}, {w:"brave",m:"勇敢"}, {w:"brick",m:"磚頭"}, {w:"broad",m:"寬闊的"},
+            {w:"broadcast",m:"廣播"}, {w:"brunch",m:"早午餐"}, {w:"bucket",m:"水桶"}, {w:"buffet",m:"自助餐"}, {w:"building",m:"大樓/建築物"},
+            {w:"bundle",m:"捆;捲……(成一束)"}, {w:"burger",m:"漢堡"}, {w:"burst",m:"爆裂"}, {w:"button",m:"釦子/按鈕"}, {w:"cabbage",m:"高麗菜/包心菜"},
+            {w:"cable",m:"電纜線/有線電視"}, {w:"cafeteria",m:"自助食堂"}, {w:"calendar",m:"月曆/行事曆"}, {w:"calm",m:"平靜的"}, {w:"campus",m:"校園"},
+            {w:"cancel",m:"取消"}, {w:"cancer",m:"癌症"}, {w:"captain",m:"上尉(軍)/船長"}, {w:"careless",m:"粗心大意的"}, {w:"carpet",m:"地毯"},
+            {w:"carrot",m:"紅蘿蔔"}, {w:"cartoon",m:"卡通"}, {w:"cash",m:"現金"}, {w:"cassette",m:"卡式錄音帶"}, {w:"cause",m:"起因/原因"},
+            {w:"ceiling",m:"天花板"}, {w:"central",m:"中心的"}, {w:"century",m:"世紀"}, {w:"cereal",m:"穀類麥片"}, {w:"certain",m:"肯定的"},
+            {w:"channel",m:"頻道/管道"}, {w:"character",m:"角色/性格"}, {w:"charge",m:"索費/負責"}, {w:"chart",m:"圖表"}, {w:"chase",m:"追逐"},
+            {w:"chemistry",m:"化學"}, {w:"childhood",m:"童年時期"}, {w:"childish",m:"幼稚的/孩子氣"}, {w:"childlike",m:"天真單純的"}, {w:"chin",m:"下巴"},
+            {w:"choice",m:"選擇(權)"}, {w:"chubby",m:"胖嘟嘟的"}, {w:"classical",m:"古典的"}, {w:"clever",m:"聰明的"}, {w:"climate",m:"氣候"},
+            {w:"closet",m:"衣櫥"}, {w:"cloud",m:"雲"}, {w:"coach",m:"教練"}, {w:"coast",m:"海岸/沿岸地區"}, {w:"cockroach",m:"蟑螂"},
+            {w:"coin",m:"錢幣"}, {w:"college",m:"專科學校/學院"}, {w:"colorful",m:"彩色的"}, {w:"command",m:"命令"}, {w:"comment",m:"評論"},
+            {w:"company",m:"公司/陪伴"}, {w:"compare",m:"比較"}, {w:"complain",m:"抱怨"}, {w:"complete",m:"完成/完全"}, {w:"concern",m:"相關/關注/關心(人事物)"},
+            {w:"confident",m:"有信心的"}, {w:"confuse",m:"使…困惑(動詞)"}, {w:"congratulation",m:"祝賀(名詞)"}, {w:"consider",m:"考慮到/認為……"}, {w:"considerate",m:"考慮周到的"},
+            {w:"contact lens",m:"隱形眼鏡"}, {w:"continue",m:"繼續"}, {w:"contract",m:"合約"}, {w:"control",m:"控制/掌控"}, {w:"convenience store",m:"便利商店"},
+            {w:"conversation",m:"對談/對話"}, {w:"corn",m:"玉米"}, {w:"cotton",m:"棉花;棉紗棉布"}, {w:"cough",m:"咳嗽(動/名詞)"}, {w:"couple",m:"(一)對/(一)雙/幾許"},
+            {w:"courage",m:"勇氣"}, {w:"court",m:"法院"}, {w:"cowboy",m:"牛仔"}, {w:"crab",m:"螃蟹"}, {w:"crayon",m:"蠟筆"},
+            {w:"cream",m:"鮮奶油"}, {w:"create",m:"創造"}, {w:"credit card",m:"信用卡"}, {w:"crime",m:"罪/罪行/犯罪(名詞)"}, {w:"crowd",m:"群眾"},
+            {w:"crowded",m:"擁擠的"}, {w:"cruel",m:"殘忍的"}, {w:"culture",m:"文化"}, {w:"cure",m:"治癒(動詞)"}, {w:"curious",m:"好奇的"},
+            {w:"current",m:"現行的"}, {w:"curtain",m:"窗簾"}, {w:"curve",m:"曲線/弧線"}, {w:"custom",m:"習俗/海關"}, {w:"customer",m:"顧客"},
+            {w:"daily",m:"日常地"}, {w:"damage",m:"損失"}, {w:"danger",m:"危險(動詞)"}, {w:"dawn",m:"黎明"}, {w:"deaf",m:"耳聾的"},
+            {w:"death",m:"死亡"}, {w:"debate",m:"辯論"}, {w:"decision",m:"決定"}, {w:"decorate",m:"裝潢"}, {w:"decrease",m:"減少"},
+            {w:"deep",m:"深的"}, {w:"deer",m:"鹿"}, {w:"degree",m:"程度/學位"}, {w:"deliver",m:"遞送/解救"}, {w:"department",m:"部門/系別"},
+            {w:"depend",m:"視……而定/取決於"}, {w:"describe",m:"描述"}, {w:"desert",m:"沙漠"}, {w:"design",m:"設計"}, {w:"desire",m:"想要……/慾望"},
+            {w:"dessert",m:"甜點"}, {w:"detect",m:"察覺"}, {w:"develop",m:"發展"}, {w:"dial",m:"撥號…(電話)"}, {w:"diamond",m:"鑽石"},
+            {w:"diary",m:"日記"}, {w:"diet",m:"飲食/節食"}, {w:"difference",m:"差異"}, {w:"difficulty",m:"難處(名詞)"}, {w:"diligent",m:"勤奮的"},
+            {w:"diplomat",m:"外交官"}, {w:"dinosaur",m:"恐龍"}, {w:"direct",m:"指揮(動詞)/直接的(形容詞)"}, {w:"direction",m:"方向"}, {w:"disappear",m:"消失/失蹤"},
+            {w:"discover",m:"發現/找到"}, {w:"discuss",m:"討論(動詞)"}, {w:"discussion",m:"討論(名詞)"}, {w:"dishonest",m:"不誠實的"}, {w:"distance",m:"距離"},
+            {w:"distant",m:"有距離的/疏離的"}, {w:"divide",m:"分配../除以(數學)"}, {w:"dizzy",m:"頭暈目眩的"}, {w:"dolphin",m:"海豚"}, {w:"donkey",m:"驢子"},
+            {w:"double",m:"雙倍的/雙重的"}, {w:"doubt",m:"懷疑"}, {w:"doughnut",m:"甜甜圈"}, {w:"downstairs",m:"樓下"}, {w:"downtown",m:"市區鬧區"},
+            {w:"drama",m:"戲劇"}, {w:"dresser",m:"梳妝台"}, {w:"drugstore",m:"藥妝店"}, {w:"dryer",m:"烘乾機/吹風機"}, {w:"dumb",m:"愚笨的/沉默不語的"},
+            {w:"duty",m:"責任/職務"}, {w:"eagle",m:"老鷹"}, {w:"earn",m:"使贏得/賺得"}, {w:"earrings",m:"耳環(複數)"}, {w:"ease",m:"使放鬆舒緩"},
+            {w:"edge",m:"邊緣"}, {w:"education",m:"教育"}, {w:"effort",m:"盡力;努力"}, {w:"elder",m:"年長的/長輩"}, {w:"elect",m:"選舉/推選"},
+            {w:"electric",m:"電動的"}, {w:"embarrass",m:"不好意思/窘迫"}, {w:"emotion",m:"情緒"}, {w:"emphasize",m:"強調"}, {w:"employ",m:"僱用"},
+            {w:"empty",m:"空白/空洞的"}, {w:"enemy",m:"敵人"}, {w:"energetic",m:"精力旺盛的"}, {w:"energy",m:"活力/能量"}, {w:"engine",m:"引擎"},
+            {w:"entrance",m:"入口"}, {w:"environment",m:"環境"}, {w:"envy",m:"忌妒"}, {w:"equal",m:"等於"}, {w:"error",m:"錯誤"},
+            {w:"especially",m:"特別地"}, {w:"event",m:"事件/大型活動"}, {w:"everywhere",m:"到處"}, {w:"evil",m:"邪惡的"}, {w:"exam",m:"考試"},
+            {w:"excite",m:"使…興奮"}, {w:"exist",m:"存在"}, {w:"exit",m:"出口/逃生門"}, {w:"expect",m:"期待"}, {w:"explain",m:"解釋;說明"},
+            {w:"express",m:"表達/快遞"}, {w:"extra",m:"額外的"}, {w:"fair",m:"公平的"}, {w:"false",m:"假的/不實的"}, {w:"fancy",m:"華麗的"},
+            {w:"fantastic",m:"好極了"}, {w:"fashionable",m:"流行的/時髦的"}, {w:"faucet",m:"水龍頭旋鈕"}, {w:"fault",m:"錯誤"}, {w:"fear",m:"恐懼"},
+            {w:"fee",m:"費用"}, {w:"feeling",m:"感覺/感受(名詞)"}, {w:"female",m:"女性"}, {w:"fence",m:"籬笆"}, {w:"film",m:"底片/電影"},
+            {w:"final",m:"最後的"}, {w:"fit",m:"使…合適"}, {w:"flag",m:"旗幟"}, {w:"flashlight",m:"手電筒"}, {w:"flat tire",m:"爆胎"},
+            {w:"flight",m:"飛行/飛機班次"}, {w:"flour",m:"麵粉"}, {w:"flu",m:"流行性感冒"}, {w:"focus",m:"焦點/使..集中專注"}, {w:"fog",m:"霧"},
+            {w:"foggy",m:"霧茫茫的"}, {w:"fool",m:"愚人/傻子"}, {w:"foolish",m:"愚蠢的"}, {w:"football",m:"美式足球"}, {w:"forest",m:"森林"},
+            {w:"forgive",m:"原諒"}, {w:"form",m:"形式/形狀/成形(動詞)"}, {w:"formal",m:"正式的"}, {w:"former",m:"早前的"}, {w:"forward",m:"向前地"},
+            {w:"frank",m:"坦白的"}, {w:"freedom",m:"自由(名詞)"}, {w:"freezer",m:"冰箱/冷藏箱"}, {w:"freezing",m:"冷凍的"}, {w:"friendship",m:"友誼"},
+            {w:"frighten",m:"使..害怕"}, {w:"furniture",m:"家具"}, {w:"gain",m:"獲得"}, {w:"garage",m:"車庫"}, {w:"gather",m:"使…聚集"},
+            {w:"general",m:"一般的"}, {w:"generous",m:"慷慨的"}, {w:"genius",m:"天才"}, {w:"gentle",m:"溫和的"}, {w:"gentleman",m:"紳士"},
+            {w:"geography",m:"地理學"}, {w:"gesture",m:"姿勢"}, {w:"goal",m:"目標"}, {w:"God",m:"神"}, {w:"gold",m:"黃金"},
+            {w:"golden",m:"金色的"}, {w:"golf",m:"高爾夫球"}, {w:"goodness",m:"良善/美德"}, {w:"government",m:"政府"}, {w:"granddaughter",m:"孫女"},
+            {w:"grandson",m:"孫子"}, {w:"greedy",m:"貪婪的"}, {w:"greet",m:"打招呼"}, {w:"guard",m:"警衛"}, {w:"guest",m:"客人"},
+            {w:"guide",m:"指導/導遊"}, {w:"gun",m:"槍"}, {w:"hair dresser",m:"美髮師"}, {w:"haircut",m:"理髮/剪髮"}, {w:"hall",m:"會堂大廳/走廊"},
+            {w:"hammer",m:"鎚子"}, {w:"handkerchief",m:"手帕"}, {w:"handle",m:"方向盤/操作"}, {w:"hanger",m:"衣架"}, {w:"hardly",m:"幾乎不……"},
+            {w:"heater",m:"暖氣機"}, {w:"height",m:"高度/海拔"}, {w:"helicopter",m:"直升機"}, {w:"hero",m:"英雄"}, {w:"highway",m:"公路"},
+            {w:"hip",m:"臀部"}, {w:"hire",m:"僱用/租借"}, {w:"hole",m:"洞"}, {w:"homesick",m:"思鄉病的"}, {w:"honesty",m:"誠實(名詞)"},
+            {w:"horrible",m:"令人毛骨悚然的"}, {w:"host",m:"主人/主持人"}, {w:"housework",m:"家事"}, {w:"hug",m:"擁抱"}, {w:"human",m:"人類"},
+            {w:"humble",m:"謙卑/使…謙卑"}, {w:"humid",m:"潮溼的"}, {w:"humor",m:"幽默感"}, {w:"humorous",m:"幽默的"}, {w:"hunger",m:"飢餓"},
+            {w:"hunter",m:"獵人"}, {w:"ignore",m:"忽視"}, {w:"ill",m:"不健康的"}, {w:"imagine",m:"想像"}, {w:"impolite",m:"不禮貌的"},
+            {w:"importance",m:"重要(名詞)"}, {w:"impossible",m:"不可能的"}, {w:"improve",m:"改善"}, {w:"include",m:"包括"}, {w:"income",m:"收入"},
+            {w:"increase",m:"增加"}, {w:"independent",m:"依賴"}, {w:"indicate",m:"指出"}, {w:"influence",m:"影響"}, {w:"information",m:"資訊"},
+            {w:"ink",m:"墨汁"}, {w:"insist",m:"堅持"}, {w:"inspire",m:"激勵"}, {w:"instant",m:"立即的"}, {w:"instrument",m:"器具/樂器"},
+            {w:"intelligent",m:"有才智的"}, {w:"international",m:"國際性的"}, {w:"interrupt",m:"打斷(談話)"}, {w:"introduce",m:"介紹"}, {w:"invent",m:"發明"},
+            {w:"invitation",m:"發明物/創造力"}, {w:"iron",m:"鐵/熨斗/燙平"}, {w:"jam",m:"果醬"}, {w:"jazz",m:"爵士樂"}, {w:"jealous",m:"忌妒的"},
+            {w:"jeep",m:"吉普車"}, {w:"joke",m:"笑話/開玩笑"}, {w:"journalist",m:"新聞記者"}, {w:"judge",m:"審判/裁判/法官"}, {w:"ketchup",m:"番茄醬"},
+            {w:"kilometer",m:"公里"}, {w:"kindergarten",m:"幼稚園"}, {w:"kingdom",m:"王國/國度"}, {w:"kitten",m:"小貓/貓仔"}, {w:"lack",m:"缺少"},
+            {w:"lady",m:"淑女"}, {w:"lamb",m:"小羊/羔羊"}, {w:"latest",m:"最近的/最新的"}, {w:"latter",m:"後者的"}, {w:"law",m:"法律"},
+            {w:"lay",m:"下蛋"}, {w:"leaf",m:"葉子"}, {w:"level",m:"程度/層級"}, {w:"lick",m:"舔"}, {w:"lift",m:"舉起/電梯"},
+            {w:"lightning",m:"閃電"}, {w:"likely",m:"很可能的"}, {w:"limit",m:"限制"}, {w:"link",m:"聯繫"}, {w:"liquid",m:"液體"},
+            {w:"liter",m:"公升"}, {w:"loaf",m:"條(吐司麵包)"}, {w:"local",m:"本地的"}, {w:"lock",m:"鎖"}, {w:"locker",m:"衣物櫃"},
+            {w:"loser",m:"失物/失敗者"}, {w:"ma'am",m:"女士/夫人"}, {w:"magazine",m:"雜誌"}, {w:"main",m:"主要的"}, {w:"major",m:"大多數的/主修"},
+            {w:"male",m:"男性"}, {w:"mall",m:"購物中心"}, {w:"manager",m:"經理"}, {w:"mango",m:"芒果"}, {w:"manner",m:"方法/禮貌"},
+            {w:"marvelous",m:"驚奇非凡的"}, {w:"mass",m:"大眾"}, {w:"master",m:"主人"}, {w:"match",m:["和…配對","火柴","比賽"]}, {w:"maximum",m:"最大量"},
+            {w:"meaning",m:"意義"}, {w:"measure",m:"測量"}, {w:"mechanic",m:"機械工;技工"}, {w:"member",m:"成員/會員"}, {w:"memory",m:"記憶/記憶力"},
+            {w:"men's room",m:"男廁"}, {w:"message",m:"口信/訊息"}, {w:"metal",m:"金屬"}, {w:"meter",m:"公尺/計量器"}, {w:"method",m:"方法"},
+            {w:"microwave",m:"微波爐"}, {w:"middle",m:"中間的"}, {w:"midnight",m:"午夜"}, {w:"minor",m:"次要的"}, {w:"minus",m:"減(去)"},
+            {w:"mirror",m:"鏡子"}, {w:"mix",m:"混合"}, {w:"model",m:"模範/模特兒"}, {w:"monster",m:"怪獸"}, {w:"mosquito",m:"蚊子"},
+            {w:"motion",m:"動作"}, {w:"movement",m:"(社會)運動"}, {w:"musician",m:"音樂家"}, {w:"napkin",m:"紙巾"}, {w:"narrow",m:"窄的"},
+            {w:"nation",m:"國家/國民"}, {w:"natural",m:"自然的"}, {w:"naughty",m:"頑皮的"}, {w:"nearly",m:"幾乎"}, {w:"necessary",m:"必要的"},
+            {w:"necklace",m:"項鍊"}, {w:"needle",m:"針"}, {w:"negative",m:"否定/負面的/陰極的"}, {w:"neither",m:"兩者都不/也………不"}, {w:"nephew",m:"姪子/外甥"},
+            {w:"nervous",m:"緊張的"}, {w:"nest",m:"巢穴"}, {w:"net",m:"網子"}, {w:"nice-looking",m:"好看的(外表)"}, {w:"niece",m:"姪女/外甥女"},
+            {w:"noisy",m:"吵鬧的"}, {w:"none",m:"一點也沒有"}, {w:"nor",m:"也不(接 neither 之後)"}, {w:"novel",m:"小說"}, {w:"nut",m:"堅果/瘋子"},
+            {w:"obey",m:"順服"}, {w:"object",m:"物體"}, {w:"ocean",m:"海洋"}, {w:"offer",m:"提供"}, {w:"omit",m:"省略"},
+            {w:"oneself",m:"自己/自身"}, {w:"onion",m:"洋蔥"}, {w:"operation",m:"運作/手術"}, {w:"opinion",m:"意見"}, {w:"ordinary",m:"平常的"},
+            {w:"oven",m:"烤箱"}, {w:"overpass",m:"越過/跳過"}, {w:"overseas",m:"海外的"}, {w:"over-weight",m:"超重的"}, {w:"owner",m:"擁有者"},
+            {w:"pain",m:"痛苦"}, {w:"painful",m:"痛苦的"}, {w:"painter",m:"油漆工/油畫家"}, {w:"pajamas",m:"睡衣"}, {w:"pale",m:"蒼白的"},
+            {w:"pan",m:"平底鍋"}, {w:"panda",m:"貓熊"}, {w:"pardon",m:"寬恕"}, {w:"parking lot",m:"停車場"}, {w:"parrot",m:"鸚鵡"},
+            {w:"partner",m:"夥伴/合夥人"}, {w:"passenger",m:"乘客"}, {w:"path",m:"小路/小徑"}, {w:"patient",m:"有耐心的/病人"}, {w:"pattern",m:"格式/花樣"},
+            {w:"pause",m:"暫停"}, {w:"peace",m:"和平"}, {w:"peaceful",m:"和平的"}, {w:"pepper",m:"胡椒/胡椒粉"}, {w:"perfect",m:"完美的"},
+            {w:"period",m:"期間/句點"}, {w:"personal",m:"私人的"}, {w:"physics",m:"物理學"}, {w:"pigeon",m:"鴿子"}, {w:"pile",m:"(一)堆"},
+            {w:"pillow",m:"枕頭"}, {w:"plain",m:"素色的/原味的"}, {w:"platform",m:"月台"}, {w:"pleasant",m:"愉悅的"}, {w:"pleased",m:"滿意的"},
+            {w:"plus",m:"加上(數學)"}, {w:"poem",m:"詩"}, {w:"poison",m:"毒藥"}, {w:"pollute",m:"使…污染"}, {w:"pollution",m:"污染(名詞)"},
+            {w:"pop music",m:"流行音樂"}, {w:"population",m:"人口"}, {w:"position",m:"位置"}, {w:"positive",m:"肯定/正面的/陽極"}, {w:"potato",m:"馬鈴薯"},
+            {w:"powder",m:"粉末"}, {w:"praise",m:"讚美"}, {w:"precious",m:"珍貴的"}, {w:"president",m:"總統/總裁"}, {w:"pressure",m:"壓力"},
+            {w:"priest",m:"祭司/神父"}, {w:"primary",m:"首要的/初級的"}, {w:"principal",m:"校長/主要的"}, {w:"principle",m:"原則"}, {w:"print",m:"列印"},
+            {w:"printer",m:"印表機"}, {w:"private",m:"私下的/私立的"}, {w:"probably",m:"很可能地"}, {w:"produce",m:"生產製造"}, {w:"production",m:"產品"},
+            {w:"professor",m:"教授"}, {w:"progress",m:"進步(名詞)"}, {w:"project",m:"專案/企劃案"}, {w:"promise",m:"承諾"}, {w:"pronounce",m:"發…的音"},
+            {w:"protect",m:"保護"}, {w:"provide",m:"提供/供給"}, {w:"pump",m:"幫浦/打氣唧筒"}, {w:"punish",m:"處罰"}, {w:"purpose",m:"目的"},
+            {w:"purse",m:"錢包"}, {w:"puzzle",m:"使…困惑"}, {w:"quit",m:"放棄"}, {w:"railroad",m:"鐵路"}, {w:"raincoat",m:"雨衣"},
+            {w:"rare",m:"稀有的"}, {w:"rather",m:"寧可"}, {w:"reach",m:"達到/伸及……"}, {w:"realize",m:"明白了解"}, {w:"reason",m:"原因"},
+            {w:"receive",m:"收到/接到"}, {w:"record",m:"記錄/唱片"}, {w:"recover",m:"恢復"}, {w:"rectangle",m:"長方形"}, {w:"recycle",m:"再回收利用"},
+            {w:"refuse",m:"拒絕"}, {w:"regret",m:"後悔"}, {w:"regular",m:"定期的/一般的"}, {w:"reject",m:"抵制/反駁"}, {w:"relative",m:"相關的/親戚"},
+            {w:"remind",m:"提醒"}, {w:"rent",m:"出租"}, {w:"repair",m:"修理"}, {w:"report",m:"報告"}, {w:"respect",m:"尊敬"},
+            {w:"responsible",m:"負責任的"}, {w:"result",m:"結果"}, {w:"return",m:"返回"}, {w:"review",m:"複習"}, {w:"revise",m:"修訂改編"},
+            {w:"rob",m:"搶劫"}, {w:"role",m:"角色"}, {w:"roof",m:"屋頂"}, {w:"root",m:"根部(植物)"}, {w:"rub",m:"使…摩擦"},
+            {w:"rubber",m:"橡膠"}, {w:"rude",m:"無禮的"}, {w:"ruin",m:"毀壞"}, {w:"rush",m:"倉促匆忙"}, {w:"safety",m:"安全性"},
+            {w:"sailor",m:"水手"}, {w:"sample",m:"樣本"}, {w:"sand",m:"沙子"}, {w:"satisfy",m:"使…滿意"}, {w:"saucer",m:"醬料碟"},
+            {w:"scarf",m:"圍巾"}, {w:"scene",m:"場幕(戲劇)/佈景"}, {w:"scenery",m:"風景"}, {w:"scientist",m:"科學家"}, {w:"score",m:"得分數"},
+            {w:"seafood",m:"海鮮"}, {w:"search",m:"搜尋"}, {w:"secondary",m:"第二的/中等的"}, {w:"secret",m:"秘密"}, {w:"section",m:"段/節"},
+            {w:"seek",m:"尋找"}, {w:"seem",m:"似乎"}, {w:"select",m:"挑選"}, {w:"selfish",m:"自私的"}, {w:"semester",m:"學期"},
+            {w:"sense",m:"感官/見識"}, {w:"servant",m:"僕人"}, {w:"serve",m:"伺候"}, {w:"service",m:"服務"}, {w:"sheet",m:"單張(紙/被單)"},
+            {w:"shelf",m:"架子/擱板"}, {w:"shoot",m:"發射"}, {w:"shore",m:"岸邊"}, {w:"shower",m:"淋浴"}, {w:"shrimp",m:"蝦"},
+            {w:"shut",m:"關上"}, {w:"silence",m:"沉默"}, {w:"silent",m:"安靜的"}, {w:"silly",m:"傻呼呼的"}, {w:"silver",m:"銀色"},
+            {w:"similar",m:"相似的"}, {w:"sincere",m:"真誠的"}, {w:"single",m:"單身/單個(數)"}, {w:"sink",m:"下沉"}, {w:"ski",m:"滑雪"},
+            {w:"skill",m:"技巧"}, {w:"skillful",m:"有技巧的/熟練的"}, {w:"skin",m:"皮膚"}, {w:"skinny",m:"瘦巴巴的"}, {w:"sleepy",m:"昏昏欲睡的"},
+            {w:"slender",m:"瘦長的"}, {w:"slice",m:"(一)切片"}, {w:"slippers",m:"拖鞋"}, {w:"snail",m:"蝸牛"}, {w:"sneakers",m:"球鞋"},
+            {w:"sneaky",m:"鬼鬼祟祟的"}, {w:"soap",m:"肥皂"}, {w:"social",m:"社會的"}, {w:"society",m:"社會"}, {w:"soda",m:"蘇打(汽水)"},
+            {w:"soft drink",m:"清涼飲料"}, {w:"softball",m:"壘球"}, {w:"solve",m:"解決"}, {w:"soul",m:"靈魂"}, {w:"sour",m:"酸的"},
+            {w:"soy-sauce",m:"醬油"}, {w:"speaker",m:"演說者/擴音器"}, {w:"speech",m:"演講"}, {w:"speed",m:"速度"}, {w:"spirit",m:"精神/心靈"},
+            {w:"spot",m:"斑點/聚光燈"}, {w:"spread",m:"塗開/散佈"}, {w:"state",m:"州(美國)"}, {w:"stationery",m:"文具"}, {w:"steal",m:"偷竊"},
+            {w:"steam",m:"蒸汽"}, {w:"step",m:"腳步"}, {w:"stingy",m:"吝嗇小氣的"}, {w:"stomachache",m:"胃痛"}, {w:"stone",m:"石頭"},
+            {w:"storm",m:"暴風雨"}, {w:"stormy",m:"暴風雨的"}, {w:"stove",m:"爐子(火爐)"}, {w:"stream",m:"溪流"}, {w:"strike",m:"(揮棒)打擊"},
+            {w:"style",m:"風格"}, {w:"subway",m:"地鐵/地下道"}, {w:"succeed",m:"成功(動詞)"}, {w:"success",m:"成功(名詞)"}, {w:"such",m:"這樣的"},
+            {w:"sudden",m:"突然的"}, {w:"suggest",m:"建議"}, {w:"suit",m:"使適合/套裝"}, {w:"super",m:"超級的"}, {w:"supper",m:"晚餐"},
+            {w:"support",m:"支持"}, {w:"survive",m:"生存"}, {w:"swallow",m:"吞下"}, {w:"swan",m:"天鵝"}, {w:"sweep",m:"清掃"},
+            {w:"swimsuit",m:"游泳衣"}, {w:"symbol",m:"象徵/符號"}, {w:"system",m:"系統"}, {w:"table tennis",m:"桌球"}, {w:"talent",m:"天份/才藝"},
+            {w:"talkative",m:"愛說話的"}, {w:"tangerine",m:"橘子"}, {w:"tank",m:"坦克車"}, {w:"teapot",m:"茶壺"}, {w:"tear",m:"眼淚/流淚/撕裂"},
+            {w:"temperature",m:"溫度"}, {w:"tent",m:"帳篷"}, {w:"term",m:"學期/(專有)名稱"}, {w:"terrific",m:"非常好的"}, {w:"textbook",m:"教科書"},
+            {w:"Thanksgiving",m:"感恩節"}, {w:"therefore",m:"因此"}, {w:"thief",m:"小偷"}, {w:"thought",m:"想法/思考(名詞)"}, {w:"through",m:"通過/藉由……"},
+            {w:"thumb",m:"拇指"}, {w:"thunder",m:"閃電"}, {w:"till",m:"直到…為止"}, {w:"tiny",m:"小的"}, {w:"tip",m:"提示/小費"},
+            {w:"title",m:"標題"}, {w:"tofu",m:"豆腐"}, {w:"toilet",m:"廁所"}, {w:"tongue",m:"舌頭"}, {w:"toothache",m:"牙痛"},
+            {w:"toothbrush",m:"牙刷"}, {w:"topic",m:"主題"}, {w:"toward",m:"朝…向"}, {w:"tower",m:"高塔"}, {w:"trace",m:"描寫/追蹤"},
+            {w:"trade",m:"交易/貿易"}, {w:"tradition",m:"傳統"}, {w:"traditional",m:"傳統的"}, {w:"trap",m:"陷阱/使……困住"}, {w:"travel",m:"旅行"},
+            {w:"treasure",m:"寶藏"}, {w:"triangle",m:"三角形"}, {w:"trousers",m:"西裝褲"}, {w:"trumpet",m:"小喇叭"}, {w:"trust",m:"信任"},
+            {w:"truth",m:"真相"}, {w:"tube",m:"軟管(管狀物)"}, {w:"tunnel",m:"隧道"}, {w:"ugly",m:"醜的"}, {w:"underline",m:"在……畫底線"},
+            {w:"underpass",m:"地下道"}, {w:"underwear",m:"內衣"}, {w:"unique",m:"獨特的"}, {w:"universe",m:"宇宙"}, {w:"university",m:"大學"},
+            {w:"upon",m:"在...上面"}, {w:"upper",m:"上層的(位置)"}, {w:"upstairs",m:"樓上/在樓上的"}, {w:"usual",m:"通常的"}, {w:"Valentine",m:"西洋情人節"},
+            {w:"valley",m:"山谷"}, {w:"valuable",m:"有價值的"}, {w:"value",m:"價值"}, {w:"vendor",m:"小販"}, {w:"victory",m:"勝利"},
+            {w:"village",m:"村落/村莊"}, {w:"vinegar",m:"醋"}, {w:"visitor",m:"訪客"}, {w:"vocabulary",m:"字彙"}, {w:"volleyball",m:"排球"},
+            {w:"vote",m:"投票/表決"}, {w:"waist",m:"腰部"}, {w:"walkman",m:"隨身聽"}, {w:"war",m:"戰爭"}, {w:"waste",m:"浪費"},
+            {w:"waterfalls",m:"瀑布"}, {w:"wedding",m:"婚禮"}, {w:"weekday",m:"週間"}, {w:"weight",m:"重量(名詞)"}, {w:"wheel",m:"輪胎"},
+            {w:"while",m:"當…的時候"}, {w:"whole",m:"全部的/完整的"}, {w:"wide",m:"寬的"}, {w:"wild",m:"野生的"}, {w:"wing",m:"翅膀"},
+            {w:"winner",m:"贏家"}, {w:"wok",m:"炒菜鍋"}, {w:"wolf",m:"野狼"}, {w:"women's room",m:"女廁"}, {w:"wood",m:"木頭"},
+            {w:"woods",m:"森林"}, {w:"worm",m:"蠕蟲"}, {w:"wound",m:"傷口/使…受傷"}, {w:"wrist",m:"手腕"}, {w:"yell",m:"喊/吼"},
+            {w:"youth",m:"青年"}
+        ]
+    };
+        // 測驗全域變數
+        let currentQuizList = [];
+        let currentIndex = 0;
+        let score = 0;
+        let userAnswers = [];
+        let currentMode = 'en-to-zh'; // 'en-to-zh' 或 'zh-to-en'
+        let currentAppMode = 'quiz'; // 'quiz' 或 'learn'
+        const TOTAL_QUESTIONS = 20;
+
+        // 當單字切換或等級改變時，動態刷新「段落選項」
+        function updatePartOptions() {
+            const levelSelect = document.getElementById('level-select');
+            const partSelect = document.getElementById('part-select');
+            if (!levelSelect || !partSelect) return;
+
+            const currentLevel = levelSelect.value;
+            const wordList = vocabData[currentLevel] || [];
+            
+            partSelect.innerHTML = '';
+            
+            // 選項 A: 全部單字
+            let allOpt = document.createElement('option');
+            allOpt.value = 'all';
+            allOpt.innerText = `全部單字 (共 ${wordList.length} 字)`;
+            partSelect.appendChild(allOpt);
+            
+            // 選項 B: 50字分段
+            const chunkSize = 50;
+            const namePrefix = currentLevel.charAt(0).toUpperCase() + currentLevel.slice(1);
+            
+            for (let i = 0; i < wordList.length; i += chunkSize) {
+                let start = i + 1;
+                let end = Math.min(i + chunkSize, wordList.length);
+                let opt = document.createElement('option');
+                opt.value = `${i}-${end}`;
+                opt.innerText = `${namePrefix}: ${start}-${end}`;
+                partSelect.appendChild(opt);
+            }
+        }
+
+        function updateUIForAppMode() {
+            const appModeSelect = document.getElementById('app-mode-select');
+            const title = document.querySelector('.main-title');
+            const subtitle = document.querySelector('.sub-title');
+            const partLabel = document.querySelector('label[for="part-select"]');
+            const modeLabel = document.querySelector('label[for="mode-select"]');
+            const modeSelect = document.getElementById('mode-select');
+
+            if (!appModeSelect || !title || !subtitle || !partLabel || !modeLabel || !modeSelect) return;
+
+            currentAppMode = appModeSelect.value;
+
+            if (currentAppMode === 'learn') {
+                title.innerText = "Eric's 國中英文單字學習模式";
+                subtitle.innerText = '請選擇學習功能模式';
+                partLabel.innerText = '3. 學習區段 (50字一組)';
+                modeLabel.innerText = '4. 學習方向';
+                modeSelect.innerHTML = `
+                    <option value="en-to-zh">英翻中 (看英文學習中文)</option>
+                    <option value="zh-to-en">中翻英 (看中文學習英文)</option>
+                `;
+                modeSelect.value = currentMode;
+            } else {
+                title.innerText = "Eric's 國中英文單字挑戰";
+                subtitle.innerText = '請選擇測驗等級與功能模式開始挑戰';
+                partLabel.innerText = '3. 學習/測試區段 (50字一組)';
+                modeLabel.innerText = '4. 測試方向';
+                modeSelect.innerHTML = `
+                    <option value="en-to-zh">英翻中 (看英文選中文)</option>
+                    <option value="zh-to-en">中翻英 (看中文選英文)</option>
+                `;
+                modeSelect.value = currentMode;
+            }
+
+            updatePartOptions();
+        }
+
+        // 初始化與重置回首頁
+        function returnToStart() {
+            showWindow('start-screen');
+            updatePartOptions();
+        }
+
+        // 當網頁載入時啟動
+        window.addEventListener('DOMContentLoaded', () => {
+            updateUIForAppMode();
+            updatePartOptions();
+        });
+
+        // 洗牌與開始測驗核心邏輯
+        function initiateQuiz() {
+            const level = document.getElementById('level-select').value;
+            const partRange = document.getElementById('part-select').value;
+            currentMode = document.getElementById('mode-select').value;
+            currentAppMode = document.getElementById('app-mode-select').value;
+            
+            let fullList = [...vocabData[level]];
+            let questionsToTake = TOTAL_QUESTIONS; // 預設 20 題
+
+            // 檢查是否使用 50字分段模式
+            if (partRange !== 'all') {
+                const [startIdx, endIdx] = partRange.split('-').map(Number);
+                fullList = fullList.slice(startIdx, endIdx);
+                
+                // 核心功能修改：分段學習測試模式下，題數等於該分段的單字數
+                questionsToTake = fullList.length;
+            } else {
+                // 全部單字模式：若單字不夠 20 個，則以單字總數為準
+                questionsToTake = Math.min(fullList.length, TOTAL_QUESTIONS);
+            }
+
+            if (currentAppMode !== 'learn') {
+                // Fisher-Yates Shuffle 洗牌
+                for (let i = fullList.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [fullList[i], fullList[j]] = [fullList[j], fullList[i]];
+                }
+            } else {
+                // 學習模式：保留原始範圍順序，並按英文單字字母順序排列
+                fullList.sort((a, b) => a.w.localeCompare(b.w, 'en', { sensitivity: 'base' }));
+            }
+
+            // 精確截取題目清單
+            currentQuizList = fullList.slice(0, questionsToTake);
+
+            if (currentQuizList.length === 0) {
+                alert('該範圍內沒有可用的單字，請重新選擇！');
+                return;
+            }
+
+            // 重置進度與狀態
+            currentIndex = 0;
+            score = 0;
+            userAnswers = [];
+
+            // 切換測驗視窗
+            showWindow('quiz-screen');
+            showQuestion();
+        }
+
+        // 視窗切換
+        function showWindow(id) {
+            document.querySelectorAll('.window').forEach(win => win.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // 發音功能 (使用瀏覽器內建語音 TTS)
+        function speakWord() {
+            // 隨時取得當前英文單字進行發音
+            const item = currentQuizList[currentIndex];
+            const msg = new SpeechSynthesisUtterance(item.w);
+            msg.lang = 'en-US';
+            msg.rate = 0.9;
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(msg);
+        }
+
+        // 產生干擾選項
+        function getDistractors(correctAnswer, count, type) {
+            // 將所有可用單字的中文或英文攤平成陣列，當作干擾來源
+            const allItems = Object.values(vocabData).flat();
+            const allOptions = allItems.map(item => type === 'zh' ? item.m : item.w);
+            const distractors = new Set();
+
+            while (distractors.size < count) {
+                const randomOption = allOptions[Math.floor(Math.random() * allOptions.length)];
+                if (randomOption !== correctAnswer) {
+                    distractors.add(randomOption);
+                }
+            }
+            return Array.from(distractors);
+        }
+
+        // 顯示題目
+        function showQuestion() {
+            const item = currentQuizList[currentIndex];
+            const qCount = currentQuizList.length;
+            
+            // 更新畫面的進度條與文字
+            document.getElementById('progress-text').innerText = `Question ${String(currentIndex + 1).padStart(2, '0')} / ${String(qCount).padStart(2, '0')}`;
+            document.getElementById('progress-bar').style.width = `${((currentIndex + 1) / qCount) * 100}%`;
+
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = '';
+
+            let correctText = '';
+            let options = [];
+            const learnTranslation = document.getElementById('learn-translation');
+            const nextBtn = document.getElementById('next-word-btn');
+
+            if (currentMode === 'en-to-zh') {
+                // 英翻中模式：看英文單字、選中文答案
+                document.getElementById('current-word').innerText = item.w;
+                correctText = Array.isArray(item.m) ? item.m[0] : item.m; // Use first meaning for quiz
+                learnTranslation.innerText = currentAppMode === 'learn' ? (Array.isArray(item.m) ? item.m.join(', ') : item.m) : '';
+                const distractors = getDistractors(correctText, currentAppMode === 'learn' ? 0 : 4, 'zh');
+                options = [correctText, ...distractors];
+            } else {
+                // 中翻英模式：看中文單字、選英文答案
+                document.getElementById('current-word').innerText = Array.isArray(item.m) ? item.m[0] : item.m; // Use first meaning for quiz
+                correctText = item.w;
+                learnTranslation.innerText = currentAppMode === 'learn' ? item.w : '';
+                const distractors = getDistractors(correctText, currentAppMode === 'learn' ? 0 : 4, 'en');
+                options = [correctText, ...distractors];
+            }
+
+            document.getElementById('speak-btn').style.display = 'inline-block';
+
+            if (currentAppMode === 'learn') {
+                grid.classList.add('hidden');
+                nextBtn.style.display = 'inline-block';
+            } else {
+                grid.classList.remove('hidden');
+                nextBtn.style.display = 'none';
+
+                // 將選項隨機洗牌
+                options.sort(() => Math.random() - 0.5);
+
+                options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = "option-btn";
+                    btn.innerText = opt;
+                    btn.onclick = () => handleAnswer(opt, correctText);
+                    grid.appendChild(btn);
+                });
+            }
+
+            // 自動發音
+            speakWord();
+        }
+
+        function showNextWord() {
+            if (currentIndex < currentQuizList.length - 1) {
+                currentIndex += 1;
+                showQuestion();
+            } else {
+                displayResults();
+            }
+        }
+
+        // 處理使用者答案與動態計分
+        function handleAnswer(selectedOption, correctText) {
+            const item = currentQuizList[currentIndex];
+            const isCorrect = selectedOption === correctText;
+            const qCount = currentQuizList.length;
+
+            // 動態權重計分：不論題數是 50 題或 20 題，滿分皆為 100 分
+            const ptsPerQuestion = 100 / qCount;
+            if (isCorrect) {
+                score += ptsPerQuestion;
+            }
+
+            userAnswers.push({
+                word: item.w,
+                meaning: item.m,
+                correct: correctText,
+                user: selectedOption,
+                status: isCorrect
+            });
+
+            if (currentIndex < qCount - 1) {
+                currentIndex++;
+                showQuestion();
+            } else {
+                displayResults();
+            }
+        }
+
+        // 顯示結果畫面
+        function displayResults() {
+            showWindow('result-screen');
+            
+            const finalScore = Math.round(score);
+            const scoreEl = document.getElementById('final-score');
+            const resultTitle = document.querySelector('#result-screen h2');
+            const tableContainer = document.getElementById('result-table-container');
+            const learnTableContainer = document.getElementById('learn-session-table-container');
+            const showScore = currentAppMode !== 'learn';
+
+            scoreEl.style.display = showScore ? 'block' : 'none';
+            if (showScore) {
+                scoreEl.innerText = finalScore;
+                scoreEl.className = 'final-score';
+                if (finalScore < 60) scoreEl.classList.add('score-red');
+                else if (finalScore < 85) scoreEl.classList.add('score-yellow');
+                else scoreEl.classList.add('score-green');
+                if (resultTitle) resultTitle.innerText = '測驗完成';
+                if (tableContainer) tableContainer.style.display = 'block';
+                if (learnTableContainer) learnTableContainer.style.display = 'none';
+            } else {
+                if (resultTitle) resultTitle.innerText = '學習完成';
+                if (tableContainer) tableContainer.style.display = 'none';
+                if (learnTableContainer) learnTableContainer.style.display = 'block';
+            }
+
+            // 調整結果表格標題
+            if (currentAppMode !== 'learn') {
+                document.getElementById('th-word').innerText = currentMode === 'en-to-zh' ? '單字' : '題目中文';
+            }
+
+            const tbody = document.getElementById('result-table-body');
+            tbody.innerHTML = '';
+            const learnTableBody = document.getElementById('learn-session-table-body');
+            if (learnTableBody) learnTableBody.innerHTML = '';
+
+            const displayItems = currentAppMode === 'learn'
+                ? currentQuizList.map(item => ({ ...item, user: '', status: 'learn' }))
+                : userAnswers;
+
+            if (currentAppMode === 'learn') {
+                const learnTable = document.getElementById('learn-session-table-container');
+                if (learnTable) learnTable.style.display = 'block';
+                displayItems.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const cambridgeUrl = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/" + encodeURIComponent(item.w.toLowerCase());
+                    const meanings = Array.isArray(item.m) ? item.m.join(', ') : item.m;
+                    tr.innerHTML = `
+                        <td class="col-word"><a href="${cambridgeUrl}" target="_blank" style="text-decoration:none; color:inherit; font-weight:bold;">${item.w}</a></td>
+                        <td class="col-ans">${meanings}</td>
+                    `;
+                    learnTableBody.appendChild(tr);
+                });
+                return;
+            }
+
+            displayItems.forEach(item => {
+                const tr = document.createElement('tr');
+                const cambridgeUrl = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/" + encodeURIComponent(item.word.toLowerCase());
+                
+                let displaySubject = currentMode === 'en-to-zh' 
+                    ? `<a href="${cambridgeUrl}" target="_blank" style="text-decoration:none; color:inherit;">${item.word}</a>`
+                    : item.meaning;
+
+                let displayCorrect = currentMode === 'en-to-zh' ? item.meaning : item.word;
+                let displayUser = currentAppMode === 'learn' ? '' : item.user;
+                let displayResult = currentAppMode === 'learn' ? '' : (item.status ? '對' : '錯');
+                let userColor = currentAppMode === 'learn' ? '#333' : (item.status ? '#333' : '#d9534f');
+                let resultColor = currentAppMode === 'learn' ? '#999' : (item.status ? '#5cb85c' : '#d9534f');
+
+                tr.innerHTML = `
+                    <td class="col-word">${displaySubject}</td>
+                    <td class="col-ans">${displayCorrect}</td>
+                    <td class="col-user" style="color: ${userColor}">${displayUser}</td>
+                    <td class="col-res" style="color: ${resultColor}; font-weight:bold;">${displayResult}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 補丁載入語音引擎
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
+    </script>
+</body>
+</html>
