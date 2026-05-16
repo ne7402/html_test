@@ -81,7 +81,9 @@
         .progress-bar { background: #8B5E3C; height: 100%; width: 0%; transition: width 0.3s; }
 
         /* 單字比例 */
-        .quiz-word { font-size: 3.8rem; font-weight: 900; margin: 20px 0; display: block; line-height: 1.2; word-break: break-word; }
+        .quiz-word { font-size: 3.8rem; font-weight: 900; margin: 20px 0; display: block; line-height: 1.2; word-break: break-word; text-align: center; }
+        .learn-translation { font-size: 2.8rem; font-weight: 700; color: #555; margin: 10px 0 30px; text-align: center; line-height: 1.2; word-break: break-word; }
+        .options-grid.hidden { display: none; }
         .audio-btn { 
             background: #f0f0f0; border: none; padding: 15px 30px; border-radius: 40px; 
             font-size: 1.2rem; cursor: pointer; margin-bottom: 30px; font-weight: bold;
@@ -130,9 +132,18 @@
             <p class="sub-title">請選擇測驗等級與功能模式開始挑戰</p>
             
             <div class="setup-container">
+                <!-- 選擇模式 -->
+                <div class="select-group">
+                    <label for="app-mode-select">1. 運行模式</label>
+                    <select id="app-mode-select" class="custom-select" onchange="updateUIForAppMode()">
+                        <option value="quiz" selected>測驗模式</option>
+                        <option value="learn">學習模式</option>
+                    </select>
+                </div>
+
                 <!-- 選擇單字範圍 -->
                 <div class="select-group">
-                    <label for="level-select">1. 單字級別</label>
+                    <label for="level-select">2. 單字級別</label>
                     <select id="level-select" class="custom-select" onchange="updatePartOptions()">
                         <option value="easy">Easy (國一/基礎)</option>
                         <option value="medium" selected>Medium (國二/中級)</option>
@@ -144,7 +155,7 @@
 
                 <!-- 選擇分段學習 -->
                 <div class="select-group">
-                    <label for="part-select">2. 學習/測試區段 (50字一組)</label>
+                    <label for="part-select">3. 學習/測試區段 (50字一組)</label>
                     <select id="part-select" class="custom-select">
                         <!-- JavaScript 動態生成 -->
                     </select>
@@ -152,7 +163,7 @@
 
                 <!-- 選擇翻譯方向模式 -->
                 <div class="select-group">
-                    <label for="mode-select">3. 測試方向</label>
+                    <label for="mode-select">4. 測試方向</label>
                     <select id="mode-select" class="custom-select">
                         <option value="en-to-zh">英翻中 (看英文選中文)</option>
                         <option value="zh-to-en">中翻英 (看中文選英文)</option>
@@ -168,15 +179,17 @@
             <div class="progress-text" id="progress-text">Question 01 / 20</div>
             <div class="progress-container"><div id="progress-bar" class="progress-bar"></div></div>
             <div class="quiz-word" id="current-word">WORD</div>
+            <div class="learn-translation" id="learn-translation"></div>
             <button class="audio-btn" id="speak-btn" onclick="speakWord()">🔊 發音</button>
             <div id="options-grid" class="options-grid"></div>
+            <button class="start-btn action-btn" id="next-word-btn" style="display:none;" onclick="showNextWord()">Next Word</button>
         </section>
 
         <!-- 視窗 3：結果 -->
         <section id="result-screen" class="window">
             <h2 style="font-size: 3rem;">測驗完成</h2>
             <div id="final-score" class="final-score">0</div>
-            <div class="table-container">
+            <div id="result-table-container" class="table-container">
                 <table>
                     <thead>
                         <tr>
@@ -189,13 +202,24 @@
                     <tbody id="result-table-body"></tbody>
                 </table>
             </div>
+            <div id="learn-session-table-container" class="table-container" style="display:none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>English</th>
+                            <th>中文</th>
+                        </tr>
+                    </thead>
+                    <tbody id="learn-session-table-body"></tbody>
+                </table>
+            </div>
             <button class="start-btn action-btn" onclick="returnToStart()">TRY AGAIN</button>
         </section>
     </div>
     <script>
     const vocabData = {
         easy: [
-            {w:"apple",m:"蘋果"},{w:"ant",m:"螞蟻"},{w:"all",m:"全部"},{w:"arm",m:"手臂"},{w:"art",m:"藝術"},{w:"ask",m:"詢問"},{w:"aunt",m:"阿姨"},{w:"bad",m:"壞的"},{w:"bag",m:"袋子"},{w:"ball",m:"球"},
+            {w:"apple",m:"蘋果"},{w:"ant",m:"螞蟻"},{w:"all",m:"全部"},{w:"arm",m:["手臂","武裝"]},{w:"art",m:"藝術"},{w:"ask",m:"詢問"},{w:"aunt",m:"阿姨"},{w:"bad",m:"壞的"},{w:"bag",m:"袋子"},{w:"ball",m:"球"},
             {w:"bee",m:"蜜蜂"},{w:"bed",m:"床"},{w:"big",m:"大的"},{w:"boy",m:"男孩"},{w:"box",m:"箱子"},{w:"bus",m:"公車"},{w:"but",m:"但是"},{w:"buy",m:"買"},{w:"bye",m:"再見"},{w:"can",m:"可以"},
             {w:"cat",m:"貓"},{w:"cup",m:"杯子"},{w:"dad",m:"爸爸"},{w:"day",m:"日子"},{w:"dog",m:"狗"},{w:"dot",m:"點"},{w:"ear",m:"耳朵"},{w:"eat",m:"吃"},{w:"egg",m:"蛋"},{w:"eye",m:"眼睛"},
             {w:"fan",m:"風扇"},{w:"far",m:"遠的"},{w:"fat",m:"胖的"},{w:"fly",m:"飛"},{w:"fun",m:"趣味"},{w:"gas",m:"瓦斯"},{w:"get",m:"得到"},{w:"gun",m:"槍"},{w:"guy",m:"傢伙"},{w:"hat",m:"帽子"},
@@ -203,17 +227,17 @@
             {w:"leg",m:"腿"},{w:"let",m:"讓"},{w:"lip",m:"嘴唇"},{w:"low",m:"低的"},{w:"mad",m:"發火"},{w:"map",m:"地圖"},{w:"men",m:"男人們"},{w:"mop",m:"拖地"},{w:"mud",m:"泥巴"},{w:"net",m:"網子"},
             {w:"new",m:"新的"},{w:"not",m:"不"},{w:"now",m:"現在"},{w:"nut",m:"堅果"},{w:"off",m:"關閉"},{w:"old",m:"老的"},{w:"one",m:"一"},{w:"out",m:"外面"},{w:"owl",m:"貓頭鷹"},{w:"own",m:"自己的"},
             {w:"pan",m:"平底鍋"},{w:"pay",m:"付錢"},{w:"pen",m:"原子筆"},{w:"pet",m:"寵物"},{w:"pie",m:"派"},{w:"pig",m:"豬"},{w:"pin",m:"大頭針"},{w:"pot",m:"鍋子"},{w:"rat",m:"大老鼠"},{w:"red",m:"紅色"},
-            {w:"run",m:"跑"},{w:"sad",m:"難過"},{w:"sea",m:"海"},{w:"see",m:"看見"},{w:"set",m:"設定"},{w:"six",m:"六"},{w:"sky",m:"天空"},{w:"son",m:"兒子"},{w:"sun",m:"太陽"},{w:"tap",m:"水龍頭"},
+            {w:"run",m:["跑","經營","流"]},{w:"sad",m:"難過"},{w:"sea",m:"海"},{w:"see",m:"看見"},{w:"set",m:["設定","一套","日落"]},{w:"six",m:"六"},{w:"sky",m:"天空"},{w:"son",m:"兒子"},{w:"sun",m:"太陽"},{w:"tap",m:"水龍頭"},
             {w:"tea",m:"茶"},{w:"ten",m:"十"},{w:"tie",m:"領帶"},{w:"tip",m:"小費"},{w:"top",m:"頂端"},{w:"toy",m:"玩具"},{w:"try",m:"嘗試"},{w:"two",m:"二"},{w:"use",m:"使用"},{w:"van",m:"廂型車"},
             {w:"wet",m:"濕的"},{w:"win",m:"贏"},{w:"yes",m:"是"},{w:"you",m:"你"},{w:"zoo",m:"動物園"},{w:"able",m:"能夠"},{w:"area",m:"區域"},{w:"army",m:"軍隊"},{w:"away",m:"遠離"},{w:"baby",m:"嬰兒"},
-            {w:"back",m:"後方"},{w:"ball",m:"球"},{w:"band",m:"樂隊"},{w:"bank",m:"銀行"},{w:"base",m:"基地"},{w:"bath",m:"洗澡"},{w:"bean",m:"豆子"},{w:"bear",m:"熊"},{w:"beat",m:"擊敗"},{w:"bell",m:"鈴鐺"},
-            {w:"belt",m:"皮帶"},{w:"best",m:"最好的"},{w:"bike",m:"腳踏車"},{w:"bill",m:"帳單"},{w:"bird",m:"鳥"},{w:"blue",m:"藍色"},{w:"boat",m:"小船"},{w:"body",m:"身體"},{w:"bomb",m:"炸彈"},{w:"bone",m:"骨頭"},
+            {w:"back",m:["後方","在...後面"]},{w:"ball",m:"球"},{w:"band",m:["樂隊","樂團"]},{w:"bank",m:["銀行","河岸","儲存"]},{w:"base",m:["基地","基礎"]},{w:"bath",m:"洗澡"},{w:"bean",m:"豆子"},{w:"bear",m:["熊","忍受","生"]},{w:"beat",m:["擊敗","敲打"]},{w:"bell",m:"鈴鐺"},
+            {w:"belt",m:"皮帶"},{w:"best",m:"最好的"},{w:"bike",m:"腳踏車"},{w:"bill",m:["帳單","紙鈔"]},{w:"bird",m:"鳥"},{w:"blue",m:"藍色"},{w:"boat",m:"小船"},{w:"body",m:"身體"},{w:"bomb",m:"炸彈"},{w:"bone",m:"骨頭"},
             {w:"book",m:"書"},{w:"born",m:"出生"},{w:"both",m:"兩者"},{w:"bowl",m:"碗"},{w:"busy",m:"忙碌"},{w:"cake",m:"蛋糕"},{w:"call",m:"打電話"},{w:"camp",m:"露營"},{w:"card",m:"卡片"},{w:"care",m:"關心"},
-            {w:"case",m:"案件"},{w:"cash",m:"現金"},{w:"cent",m:"分"},{w:"city",m:"城市"},{w:"clay",m:"黏土"},{w:"club",m:"俱樂部"},{w:"coat",m:"大衣"},{w:"code",m:"代碼"},{w:"coin",m:"硬幣"},{w:"cold",m:"冷"},
+            {w:"case",m:["案件","箱子","情況"]},{w:"cash",m:"現金"},{w:"cent",m:"分"},{w:"city",m:"城市"},{w:"clay",m:"黏土"},{w:"club",m:"俱樂部"},{w:"coat",m:"大衣"},{w:"code",m:"代碼"},{w:"coin",m:"硬幣"},{w:"cold",m:"冷"},
             {w:"cook",m:"煮"},{w:"cool",m:"酷"},{w:"copy",m:"複印"},{w:"cost",m:"花費"},{w:"crow",m:"烏鴉"},{w:"cute",m:"可愛"},{w:"dark",m:"黑暗"},{w:"date",m:"日期"},{w:"dead",m:"死"},{w:"dear",m:"親愛的"},
             {w:"deep",m:"深"},{w:"deer",m:"鹿"},{w:"desk",m:"書桌"},{w:"diet",m:"飲食"},{w:"dish",m:"盤子"},{w:"doll",m:"洋娃娃"},{w:"door",m:"門"},{w:"down",m:"向下"},{w:"draw",m:"畫"},{w:"drop",m:"掉落"},
             {w:"drum",m:"鼓"},{w:"duck",m:"鴨子"},{w:"dust",m:"灰塵"},{w:"duty",m:"義務"},{w:"each",m:"每個"},{w:"east",m:"東方"},{w:"easy",m:"容易"},{w:"edge",m:"邊緣"},{w:"else",m:"其他"},{w:"even",m:"甚至"},
-            {w:"ever",m:"曾經"},{w:"exam",m:"考試"},{w:"exit",m:"出口"},{w:"face",m:"臉"},{w:"fact",m:"事實"},{w:"fail",m:"失敗"},{w:"fair",m:"公平"},{w:"fall",m:"掉落"},{w:"farm",m:"農場"},{w:"fast",m:"快"},
+            {w:"ever",m:"曾經"},{w:"exam",m:"考試"},{w:"exit",m:"出口"},{w:"face",m:"臉"},{w:"fact",m:"事實"},{w:"fail",m:"失敗"},{w:"fair",m:["公平","美麗","集市"]},{w:"fall",m:["掉落","秋天","瀑布"]},{w:"farm",m:"農場"},{w:"fast",m:"快"},
             {w:"feel",m:"感覺"},{w:"feet",m:"腳"},{w:"file",m:"文件"},{w:"fill",m:"充滿"},{w:"film",m:"電影"},{w:"find",m:"找到"},{w:"fine",m:"好"},{w:"fire",m:"火"},{w:"fish",m:"魚"},{w:"five",m:"五"},
             {w:"flag",m:"旗幟"},{w:"food",m:"食物"},{w:"foot",m:"腳"},{w:"form",m:"表格"},{w:"free",m:"自由"},{w:"frog",m:"青蛙"},{w:"from",m:"來自"},{w:"full",m:"滿的"},{w:"game",m:"遊戲"},{w:"gate",m:"大門"},
             {w:"gift",m:"禮物"},{w:"girl",m:"女孩"},{w:"give",m:"給"},{w:"glad",m:"高興"},{w:"goat",m:"山羊"},{w:"gold",m:"黃金"},{w:"good",m:"好的"},{w:"grow",m:"生長"},{w:"hair",m:"頭髮"},{w:"half",m:"一半"},
@@ -224,18 +248,18 @@
             {w:"make",m:"製造"},{w:"mask",m:"面具"},{w:"meal",m:"餐"},{w:"meat",m:"肉"},{w:"milk",m:"牛奶"},{w:"miss",m:"錯過"},{w:"moon",m:"月亮"},{w:"more",m:"更多"},{w:"move",m:"移動"},{w:"much",m:"很多"},
             {w:"name",m:"名字"},{w:"near",m:"靠近"},{w:"neck",m:"脖子"},{w:"news",m:"新聞"},{w:"next",m:"下一個"},{w:"nice",m:"好的"},{w:"nine",m:"九"},{w:"nose",m:"鼻子"},{w:"note",m:"筆記"},{w:"okay",m:"可以"},
             {w:"open",m:"打開"},{w:"over",m:"結束"},{w:"page",m:"頁面"},{w:"pain",m:"疼痛"},{w:"park",m:"公園"},{w:"part",m:"部分"},{w:"pass",m:"經過"},{w:"past",m:"過去"},{w:"pink",m:"粉紅色"},{w:"plan",m:"計畫"},
-            {w:"play",m:"玩"},{w:"poor",m:"窮的"},{w:"pull",m:"拉"},{w:"push",m:"推"},{w:"quiz",m:"測驗"},{w:"rain",m:"雨"},{w:"read",m:"讀"},{w:"real",m:"真的"},{w:"rice",m:"米飯"},{w:"rich",m:"富有"},
+            {w:"play",m:["玩","演奏","扮演"]},{w:"poor",m:"窮的"},{w:"pull",m:"拉"},{w:"push",m:"推"},{w:"quiz",m:"測驗"},{w:"rain",m:"雨"},{w:"read",m:"讀"},{w:"real",m:"真的"},{w:"rice",m:"米飯"},{w:"rich",m:"富有"},
             {w:"ride",m:"騎"},{w:"road",m:"道路"},{w:"rock",m:"岩石"},{w:"room",m:"房間"},{w:"rose",m:"玫瑰"},{w:"rule",m:"規則"},{w:"sale",m:"拍賣"},{w:"salt",m:"鹽"},{w:"same",m:"相同"},{w:"save",m:"儲存"},
             {w:"send",m:"寄送"},{w:"ship",m:"船"},{w:"shoe",m:"鞋子"},{w:"shop",m:"店"},{w:"show",m:"顯示"},{w:"sick",m:"生病的"},{w:"sing",m:"唱"},{w:"size",m:"尺寸"},{w:"slow",m:"慢的"},{w:"snow",m:"雪"},
             {w:"soap",m:"肥皂"},{w:"soft",m:"軟的"},{w:"song",m:"歌曲"},{w:"soup",m:"湯"},{w:"star",m:"星星"},{w:"stay",m:"停留"},{w:"stop",m:"停止"},{w:"swim",m:"游泳"},{w:"tail",m:"尾巴"},{w:"take",m:"拿"},
             {w:"talk",m:"談話"},{w:"tall",m:"高的"},{w:"taxi",m:"計程車"},{w:"tell",m:"告訴"},{w:"test",m:"測驗"},{w:"than",m:"比起"},{w:"that",m:"那個"},{w:"them",m:"他們"},{w:"then",m:"然後"},{w:"thin",m:"瘦的"},
             {w:"this",m:"這個"},{w:"time",m:"時間"},{w:"town",m:"城鎮"},{w:"tree",m:"樹"},{w:"trip",m:"旅行"},{w:"true",m:"真實"},{w:"ugly",m:"醜的"},{w:"unit",m:"單位"},{w:"very",m:"非常"},{w:"view",m:"視野"},
-            {w:"wait",m:"等待"},{w:"wake",m:"醒來"},{w:"walk",m:"走路"},{w:"wall",m:"牆壁"},{w:"want",m:"想要"},{w:"warm",m:"溫暖"},{w:"wash",m:"清洗"},{w:"watch",m:"手錶"},{w:"wave",m:"波浪"},{w:"wear",m:"穿"},
+            {w:"wait",m:"等待"},{w:"wake",m:"醒來"},{w:"walk",m:"走路"},{w:"wall",m:"牆壁"},{w:"want",m:"想要"},{w:"warm",m:"溫暖"},{w:"wash",m:"清洗"},{w:"watch",m:["手錶","看","守護"]},{w:"wave",m:"波浪"},{w:"wear",m:"穿"},
             {w:"week",m:"星期"},{w:"west",m:"西方"},{w:"what",m:"什麼"},{w:"when",m:"何時"},{w:"wife",m:"妻子"},{w:"will",m:"將"},{w:"wind",m:"風"},{w:"wine",m:"葡萄酒"},{w:"wish",m:"祝福"},{w:"with",m:"與"},
             {w:"wood",m:"木頭"},{w:"word",m:"單字"},{w:"work",m:"工作"},{w:"year",m:"年份"},{w:"zero",m:"零"}
         ],
         medium: [
-            {w:"absent",m:"缺席"},{w:"accept",m:"接受"},{w:"action",m:"行動"},{w:"active",m:"活躍的"},{w:"actor",m:"演員"},{w:"add",m:"增加"},{w:"address",m:"地址"},{w:"adult",m:"大人"},{w:"advice",m:"建議"},{w:"afraid",m:"害怕"},
+            {w:"absent",m:"缺席"},{w:"accept",m:"接受"},{w:"action",m:"行動"},{w:"active",m:"活躍的"},{w:"actor",m:"演員"},{w:"add",m:"增加"},{w:"address",m:["地址","網址","演講","處理"]},{w:"adult",m:"大人"},{w:"advice",m:"建議"},{w:"afraid",m:"害怕"},
             {w:"agree",m:"同意"},{w:"ahead",m:"在前"},{w:"allow",m:"允許"},{w:"almost",m:"幾乎"},{w:"along",m:"沿著"},{w:"aloud",m:"大聲地"},{w:"always",m:"總是"},{w:"amount",m:"數量"},{w:"angry",m:"生氣"},{w:"animal",m:"動物"},
             {w:"answer",m:"答案"},{w:"anyway",m:"反正"},{w:"appear",m:"出現"},{w:"arrive",m:"到達"},{w:"attack",m:"攻擊"},{w:"attend",m:"參加"},{w:"august",m:"八月"},{w:"autumn",m:"秋天"},{w:"avenue",m:"大道"},{w:"avoid",m:"避免"},
             {w:"basket",m:"籃子"},{w:"beauty",m:"美"},{w:"become",m:"成為"},{w:"before",m:"之前"},{w:"begin",m:"開始"},{w:"behind",m:"在後"},{w:"belief",m:"信念"},{w:"belong",m:"屬於"},{w:"below",m:"在下"},{w:"beside",m:"在旁"},
@@ -482,7 +506,7 @@
             {w:"leader",m:"領導者"}, {w:"learn",m:"學習"}, {w:"least",m:"最少〈的〉"}, {w:"leave",m:"離開"}, {w:"left",m:"左邊"},
             {w:"leg",m:"腿"}, {w:"lemon",m:"檸檬"}, {w:"lend",m:"借出"}, {w:"less",m:"較少的"}, {w:"lesson",m:"課"},
             {w:"let",m:"讓"}, {w:"letter",m:"信"}, {w:"lettuce",m:"萵苣"}, {w:"library",m:"圖書館"}, {w:"lid",m:"蓋子"},
-            {w:"lie",m:"說謊"}, {w:"life",m:"生活"}, {w:"light",m:"燈光,輕的"}, {w:"like",m:"喜歡"}, {w:"line",m:"隊伍,線條"},
+            {w:"lie",m:"說謊"}, {w:"life",m:"生活"}, {w:"light",m:["燈光","輕的","點燃"]}, {w:"like",m:"喜歡"}, {w:"line",m:"隊伍,線條"},
             {w:"lion",m:"獅子"}, {w:"lip",m:"嘴唇"}, {w:"list",m:"表,名單"}, {w:"listen",m:"聽"}, {w:"little",m:"小的"},
             {w:"live",m:"住,活的,實況"}, {w:"living room",m:"客廳"}, {w:"lonely",m:"寂寞的"}, {w:"long",m:"長的"}, {w:"look",m:"看"},
             {w:"lose",m:"遺失"}, {w:"loud",m:"大聲的"}, {w:"love",m:"喜愛"}, {w:"lovely",m:"可愛的"}, {w:"low",m:"低的"},
@@ -560,7 +584,7 @@
             {w:"sometimes",m:"有時候"}, {w:"somewhere",m:"某處"}, {w:"son",m:"兒子"}, {w:"song",m:"歌曲"}, {w:"soon",m:"不久,即將"},
             {w:"sore",m:"疼痛的"}, {w:"sorry",m:"抱歉〈的〉"}, {w:"sound",m:"聲音,聽起來"}, {w:"soup",m:"湯"}, {w:"south",m:"南方"},
             {w:"space",m:"空間"}, {w:"spaghetti",m:"義大利麵"}, {w:"speak",m:"說"}, {w:"special",m:"特別的"}, {w:"spell",m:"拼字"},
-            {w:"spend",m:"花(錢,時間)"}, {w:"spider",m:"蜘蛛"}, {w:"spoon",m:"湯匙"}, {w:"sport",m:"運動"}, {w:"spring",m:"春天"},
+            {w:"spend",m:"花(錢,時間)"}, {w:"spider",m:"蜘蛛"}, {w:"spoon",m:"湯匙"}, {w:"sport",m:"運動"}, {w:"spring",m:["春天","彈簧","跳躍"]},
             {w:"square",m:"正方形的"}, {w:"stairs",m:"樓梯"}, {w:"stamp",m:"郵票"}, {w:"stand",m:"站立"}, {w:"star",m:"星星"},
             {w:"start",m:"開始"}, {w:"station",m:"車站,站,局"}, {w:"stay",m:"停留"}, {w:"(beef) steak",m:"(牛)排"}, {w:"still",m:"仍然"},
             {w:"stomach",m:"胃"}, {w:"stop",m:"停"}, {w:"store",m:"商店"}, {w:"straight",m:"直的"}, {w:"story",m:"故事"},
@@ -695,7 +719,7 @@
             {w:"liter",m:"公升"}, {w:"loaf",m:"條(吐司麵包)"}, {w:"local",m:"本地的"}, {w:"lock",m:"鎖"}, {w:"locker",m:"衣物櫃"},
             {w:"loser",m:"失物/失敗者"}, {w:"ma'am",m:"女士/夫人"}, {w:"magazine",m:"雜誌"}, {w:"main",m:"主要的"}, {w:"major",m:"大多數的/主修"},
             {w:"male",m:"男性"}, {w:"mall",m:"購物中心"}, {w:"manager",m:"經理"}, {w:"mango",m:"芒果"}, {w:"manner",m:"方法/禮貌"},
-            {w:"marvelous",m:"驚奇非凡的"}, {w:"mass",m:"大眾"}, {w:"master",m:"主人"}, {w:"match",m:"和…配對"}, {w:"maximum",m:"最大量"},
+            {w:"marvelous",m:"驚奇非凡的"}, {w:"mass",m:"大眾"}, {w:"master",m:"主人"}, {w:"match",m:["和…配對","火柴","比賽"]}, {w:"maximum",m:"最大量"},
             {w:"meaning",m:"意義"}, {w:"measure",m:"測量"}, {w:"mechanic",m:"機械工;技工"}, {w:"member",m:"成員/會員"}, {w:"memory",m:"記憶/記憶力"},
             {w:"men's room",m:"男廁"}, {w:"message",m:"口信/訊息"}, {w:"metal",m:"金屬"}, {w:"meter",m:"公尺/計量器"}, {w:"method",m:"方法"},
             {w:"microwave",m:"微波爐"}, {w:"middle",m:"中間的"}, {w:"midnight",m:"午夜"}, {w:"minor",m:"次要的"}, {w:"minus",m:"減(去)"},
@@ -776,6 +800,7 @@
         let score = 0;
         let userAnswers = [];
         let currentMode = 'en-to-zh'; // 'en-to-zh' 或 'zh-to-en'
+        let currentAppMode = 'quiz'; // 'quiz' 或 'learn'
         const TOTAL_QUESTIONS = 20;
 
         // 當單字切換或等級改變時，動態刷新「段落選項」
@@ -809,6 +834,43 @@
             }
         }
 
+        function updateUIForAppMode() {
+            const appModeSelect = document.getElementById('app-mode-select');
+            const title = document.querySelector('.main-title');
+            const subtitle = document.querySelector('.sub-title');
+            const partLabel = document.querySelector('label[for="part-select"]');
+            const modeLabel = document.querySelector('label[for="mode-select"]');
+            const modeSelect = document.getElementById('mode-select');
+
+            if (!appModeSelect || !title || !subtitle || !partLabel || !modeLabel || !modeSelect) return;
+
+            currentAppMode = appModeSelect.value;
+
+            if (currentAppMode === 'learn') {
+                title.innerText = "Eric's 國中英文單字學習模式";
+                subtitle.innerText = '請選擇學習功能模式';
+                partLabel.innerText = '3. 學習區段 (50字一組)';
+                modeLabel.innerText = '4. 學習方向';
+                modeSelect.innerHTML = `
+                    <option value="en-to-zh">英翻中 (看英文學習中文)</option>
+                    <option value="zh-to-en">中翻英 (看中文學習英文)</option>
+                `;
+                modeSelect.value = currentMode;
+            } else {
+                title.innerText = "Eric's 國中英文單字挑戰";
+                subtitle.innerText = '請選擇測驗等級與功能模式開始挑戰';
+                partLabel.innerText = '3. 學習/測試區段 (50字一組)';
+                modeLabel.innerText = '4. 測試方向';
+                modeSelect.innerHTML = `
+                    <option value="en-to-zh">英翻中 (看英文選中文)</option>
+                    <option value="zh-to-en">中翻英 (看中文選英文)</option>
+                `;
+                modeSelect.value = currentMode;
+            }
+
+            updatePartOptions();
+        }
+
         // 初始化與重置回首頁
         function returnToStart() {
             showWindow('start-screen');
@@ -817,6 +879,7 @@
 
         // 當網頁載入時啟動
         window.addEventListener('DOMContentLoaded', () => {
+            updateUIForAppMode();
             updatePartOptions();
         });
 
@@ -825,6 +888,7 @@
             const level = document.getElementById('level-select').value;
             const partRange = document.getElementById('part-select').value;
             currentMode = document.getElementById('mode-select').value;
+            currentAppMode = document.getElementById('app-mode-select').value;
             
             let fullList = [...vocabData[level]];
             let questionsToTake = TOTAL_QUESTIONS; // 預設 20 題
@@ -841,10 +905,15 @@
                 questionsToTake = Math.min(fullList.length, TOTAL_QUESTIONS);
             }
 
-            // Fisher-Yates Shuffle 洗牌
-            for (let i = fullList.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [fullList[i], fullList[j]] = [fullList[j], fullList[i]];
+            if (currentAppMode !== 'learn') {
+                // Fisher-Yates Shuffle 洗牌
+                for (let i = fullList.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [fullList[i], fullList[j]] = [fullList[j], fullList[i]];
+                }
+            } else {
+                // 學習模式：保留原始範圍順序，並按英文單字字母順序排列
+                fullList.sort((a, b) => a.w.localeCompare(b.w, 'en', { sensitivity: 'base' }));
             }
 
             // 精確截取題目清單
@@ -912,39 +981,56 @@
 
             let correctText = '';
             let options = [];
+            const learnTranslation = document.getElementById('learn-translation');
+            const nextBtn = document.getElementById('next-word-btn');
 
             if (currentMode === 'en-to-zh') {
                 // 英翻中模式：看英文單字、選中文答案
                 document.getElementById('current-word').innerText = item.w;
-                document.getElementById('speak-btn').style.display = 'inline-block';
-                correctText = item.m;
-                
-                const distractors = getDistractors(correctText, 4, 'zh');
+                correctText = Array.isArray(item.m) ? item.m[0] : item.m; // Use first meaning for quiz
+                learnTranslation.innerText = currentAppMode === 'learn' ? (Array.isArray(item.m) ? item.m.join(', ') : item.m) : '';
+                const distractors = getDistractors(correctText, currentAppMode === 'learn' ? 0 : 4, 'zh');
                 options = [correctText, ...distractors];
             } else {
                 // 中翻英模式：看中文單字、選英文答案
-                document.getElementById('current-word').innerText = item.m;
-                document.getElementById('speak-btn').style.display = 'none'; // 中文畫面隱藏發音按鈕
+                document.getElementById('current-word').innerText = Array.isArray(item.m) ? item.m[0] : item.m; // Use first meaning for quiz
                 correctText = item.w;
-                
-                const distractors = getDistractors(correctText, 4, 'en');
+                learnTranslation.innerText = currentAppMode === 'learn' ? item.w : '';
+                const distractors = getDistractors(correctText, currentAppMode === 'learn' ? 0 : 4, 'en');
                 options = [correctText, ...distractors];
             }
 
-            // 將選項隨機洗牌
-            options.sort(() => Math.random() - 0.5);
+            document.getElementById('speak-btn').style.display = 'inline-block';
 
-            options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = "option-btn";
-                btn.innerText = opt;
-                btn.onclick = () => handleAnswer(opt, correctText);
-                grid.appendChild(btn);
-            });
+            if (currentAppMode === 'learn') {
+                grid.classList.add('hidden');
+                nextBtn.style.display = 'inline-block';
+            } else {
+                grid.classList.remove('hidden');
+                nextBtn.style.display = 'none';
 
-            // 如果是英翻中模式，主動唸出單字
-            if (currentMode === 'en-to-zh') {
-                speakWord();
+                // 將選項隨機洗牌
+                options.sort(() => Math.random() - 0.5);
+
+                options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = "option-btn";
+                    btn.innerText = opt;
+                    btn.onclick = () => handleAnswer(opt, correctText);
+                    grid.appendChild(btn);
+                });
+            }
+
+            // 自動發音
+            speakWord();
+        }
+
+        function showNextWord() {
+            if (currentIndex < currentQuizList.length - 1) {
+                currentIndex += 1;
+                showQuestion();
+            } else {
+                displayResults();
             }
         }
 
@@ -982,36 +1068,76 @@
             
             const finalScore = Math.round(score);
             const scoreEl = document.getElementById('final-score');
-            scoreEl.innerText = finalScore;
+            const resultTitle = document.querySelector('#result-screen h2');
+            const tableContainer = document.getElementById('result-table-container');
+            const learnTableContainer = document.getElementById('learn-session-table-container');
+            const showScore = currentAppMode !== 'learn';
 
-            // 分數顏色判斷
-            scoreEl.className = 'final-score';
-            if (finalScore < 60) scoreEl.classList.add('score-red');
-            else if (finalScore < 85) scoreEl.classList.add('score-yellow');
-            else scoreEl.classList.add('score-green');
+            scoreEl.style.display = showScore ? 'block' : 'none';
+            if (showScore) {
+                scoreEl.innerText = finalScore;
+                scoreEl.className = 'final-score';
+                if (finalScore < 60) scoreEl.classList.add('score-red');
+                else if (finalScore < 85) scoreEl.classList.add('score-yellow');
+                else scoreEl.classList.add('score-green');
+                if (resultTitle) resultTitle.innerText = '測驗完成';
+                if (tableContainer) tableContainer.style.display = 'block';
+                if (learnTableContainer) learnTableContainer.style.display = 'none';
+            } else {
+                if (resultTitle) resultTitle.innerText = '學習完成';
+                if (tableContainer) tableContainer.style.display = 'none';
+                if (learnTableContainer) learnTableContainer.style.display = 'block';
+            }
 
             // 調整結果表格標題
-            document.getElementById('th-word').innerText = currentMode === 'en-to-zh' ? '單字' : '題目中文';
+            if (currentAppMode !== 'learn') {
+                document.getElementById('th-word').innerText = currentMode === 'en-to-zh' ? '單字' : '題目中文';
+            }
 
             const tbody = document.getElementById('result-table-body');
             tbody.innerHTML = '';
+            const learnTableBody = document.getElementById('learn-session-table-body');
+            if (learnTableBody) learnTableBody.innerHTML = '';
 
-            userAnswers.forEach(item => {
+            const displayItems = currentAppMode === 'learn'
+                ? currentQuizList.map(item => ({ ...item, user: '', status: 'learn' }))
+                : userAnswers;
+
+            if (currentAppMode === 'learn') {
+                const learnTable = document.getElementById('learn-session-table-container');
+                if (learnTable) learnTable.style.display = 'block';
+                displayItems.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const cambridgeUrl = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/" + encodeURIComponent(item.w.toLowerCase());
+                    const meanings = Array.isArray(item.m) ? item.m.join(', ') : item.m;
+                    tr.innerHTML = `
+                        <td class="col-word"><a href="${cambridgeUrl}" target="_blank" style="text-decoration:none; color:inherit; font-weight:bold;">${item.w}</a></td>
+                        <td class="col-ans">${meanings}</td>
+                    `;
+                    learnTableBody.appendChild(tr);
+                });
+                return;
+            }
+
+            displayItems.forEach(item => {
                 const tr = document.createElement('tr');
                 const cambridgeUrl = "https://dictionary.cambridge.org/dictionary/english-chinese-traditional/" + encodeURIComponent(item.word.toLowerCase());
                 
-                // 根據模式顯示正確對照欄位
                 let displaySubject = currentMode === 'en-to-zh' 
                     ? `<a href="${cambridgeUrl}" target="_blank" style="text-decoration:none; color:inherit;">${item.word}</a>`
                     : item.meaning;
 
                 let displayCorrect = currentMode === 'en-to-zh' ? item.meaning : item.word;
+                let displayUser = currentAppMode === 'learn' ? '' : item.user;
+                let displayResult = currentAppMode === 'learn' ? '' : (item.status ? '對' : '錯');
+                let userColor = currentAppMode === 'learn' ? '#333' : (item.status ? '#333' : '#d9534f');
+                let resultColor = currentAppMode === 'learn' ? '#999' : (item.status ? '#5cb85c' : '#d9534f');
 
                 tr.innerHTML = `
                     <td class="col-word">${displaySubject}</td>
                     <td class="col-ans">${displayCorrect}</td>
-                    <td class="col-user" style="color: ${item.status ? '#333' : '#d9534f'}">${item.user}</td>
-                    <td class="col-res" style="color: ${item.status ? '#5cb85c' : '#d9534f'}; font-weight:bold;">${item.status ? '對' : '錯'}</td>
+                    <td class="col-user" style="color: ${userColor}">${displayUser}</td>
+                    <td class="col-res" style="color: ${resultColor}; font-weight:bold;">${displayResult}</td>
                 `;
                 tbody.appendChild(tr);
             });
